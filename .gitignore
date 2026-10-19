@@ -1,0 +1,8 @@
+xcuserdata/
+DerivedData/
+build/
+*.xcuserstate
+.DS_Store
+
+# Raw server responses from the debug tool (contain hostnames, container names)
+debug-responses/
