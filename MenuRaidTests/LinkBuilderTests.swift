@@ -113,6 +113,58 @@ struct LinkBuilderTests {
         #expect(LinkBuilder.container(c, base: lan, overrides: [:]).url?.absoluteString == "http://192.168.1.10:8096")
     }
 
+    // MARK: Stopped containers (Docker reports no live ports for them)
+
+    private func stopped(_ name: String, webUI: String?, template: [PortMapping]?) -> DockerContainer {
+        DockerContainer(id: name, name: name, image: nil, state: .exited, statusText: nil, ports: [], webUITemplate: webUI, templatePorts: template)
+    }
+
+    @Test func stoppedContainerUsesTheTemplatesPortNotTheContainerPort() {
+        // Real audiobookshelf while stopped: no live ports, template maps 80 -> 13378. It must NOT link to port 80,
+        // which on the server is Unraid's own webGUI.
+        let c = stopped("audiobookshelf", webUI: "http://[IP]:[PORT:80]", template: [PortMapping(privatePort: 80, publicPort: 13378)])
+        #expect(LinkBuilder.container(c, base: lan, overrides: [:]).url?.absoluteString == "http://192.168.1.10:13378")
+    }
+
+    @Test func realStoppedContainers() {
+        let cases: [(String, String, [PortMapping], Int)] = [
+            ("DiskSpeed", "http://[IP]:[PORT:8888]/", [PortMapping(privatePort: 8888, publicPort: 18888)], 18888),
+            ("Thunderbird", "http://[IP]:[PORT:5800]", [PortMapping(privatePort: 5800, publicPort: 7826), PortMapping(privatePort: 5900, publicPort: 7926)], 7826),
+            ("speedtest-tracker", "http://[IP]:[PORT:80]/", [PortMapping(privatePort: 80, publicPort: 3333)], 3333),
+        ]
+        for (name, template, ports, expected) in cases {
+            let link = LinkBuilder.container(stopped(name, webUI: template, template: ports), base: lan, overrides: [:])
+            #expect(link.url?.port == expected, "\(name)")
+        }
+    }
+
+    @Test func livePortsBeatTemplatePorts() {
+        let c = DockerContainer(
+            id: "x", name: "x", image: nil, state: .running, statusText: nil,
+            ports: [PortMapping(privatePort: 80, publicPort: 9001)], webUITemplate: "http://[IP]:[PORT:80]",
+            templatePorts: [PortMapping(privatePort: 80, publicPort: 8000)]
+        )
+        #expect(LinkBuilder.container(c, base: lan, overrides: [:]).url?.port == 9001)
+    }
+
+    @Test func hostNetworkWithNoMappingsAnywhereStillUsesItsOwnPort() {
+        let c = stopped("Jellyfin", webUI: "http://[IP]:[PORT:8096]", template: nil)
+        #expect(LinkBuilder.container(c, base: lan, overrides: [:]).url?.port == 8096)
+        let empty = stopped("Jellyfin", webUI: "http://[IP]:[PORT:8096]", template: [])
+        #expect(LinkBuilder.container(empty, base: lan, overrides: [:]).url?.port == 8096)
+    }
+
+    @Test func bridgeContainerThatDoesntPublishTheWebUIPortDoesNotGuess() {
+        // Template publishes 9000 only; the WebUI is on 8080, which isn't published: don't link to :8080.
+        let c = stopped("app", webUI: "http://[IP]:[PORT:8080]", template: [PortMapping(privatePort: 9000, publicPort: 9000)])
+        #expect(LinkBuilder.container(c, base: lan, overrides: [:]) == .published(URL(string: "http://192.168.1.10:9000")!))
+    }
+
+    @Test func fallbackUsesTemplatePortsWhileStopped() {
+        let c = stopped("app", webUI: nil, template: [PortMapping(privatePort: 80, publicPort: 8085), PortMapping(privatePort: 22, publicPort: 2222)])
+        #expect(LinkBuilder.container(c, base: lan, overrides: [:]).url?.port == 2222)   // lowest published, as for live ports
+    }
+
     @Test func templateWithAnUnpublishedPortFallsBack() {
         // Bridge container whose WebUI port isn't published: the template can't be used.
         let c = container("app", ports: [tcp(9000, private: 9000)], webUI: "http://[IP]:[PORT:8080]")

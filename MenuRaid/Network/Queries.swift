@@ -69,6 +69,25 @@ nonisolated enum Queries {
     static let dockerWebUI = "{ docker { containers { names webUiUrl } } }"
     static let dockerTemplatePorts = "{ docker { containers { names templatePorts { privatePort publicPort type } lanIpPorts } } }"
 
+    /// Field names of the types that might say whether an Unraid OS update exists. Missing types come back null.
+    static let osUpdateTypes = """
+    { info: __type(name: "Info") { fields { name } }
+      infoOs: __type(name: "InfoOs") { fields { name } }
+      infoVersions: __type(name: "InfoVersions") { fields { name } }
+      vars: __type(name: "Vars") { fields { name } }
+      server: __type(name: "Server") { fields { name } }
+      registration: __type(name: "Registration") { fields { name } }
+      config: __type(name: "Config") { fields { name } }
+      flash: __type(name: "Flash") { fields { name } } }
+    """
+
+    /// Per-container extras: "update available" and the template's port mapping (which stays correct while a
+    /// container is stopped, when Docker reports no live ports). Fetched separately from the main container query
+    /// so that a server without these fields still lists its containers.
+    static let dockerExtras = """
+    { docker { containers { names isUpdateAvailable templatePorts { privatePort publicPort type } } } }
+    """
+
     static let queryRoot = "{ __schema { queryType { fields { name } } } }"
 
     /// Everything the debug tool can run, in the order shown in the picker.
@@ -85,6 +104,8 @@ nonisolated enum Queries {
         Preset(name: "introspect-notifications", query: notificationsType),
         Preset(name: "introspect-vm", query: vmDomainType),
         Preset(name: "introspect-docker", query: dockerContainerType),
+        Preset(name: "introspect-os-update", query: osUpdateTypes),
+        Preset(name: "docker-extras", query: dockerExtras),
         Preset(name: "docker-labels", query: dockerLabels),
         Preset(name: "docker-webui", query: dockerWebUI),
         Preset(name: "docker-templatePorts", query: dockerTemplatePorts),

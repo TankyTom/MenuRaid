@@ -192,6 +192,20 @@ final class ServerStore {
         refreshNow()
     }
 
+    /// How many containers have a newer image available.
+    var containerUpdateCount: Int {
+        snapshot?.containers?.filter { $0.updateAvailable == true }.count ?? 0
+    }
+
+    /// Containers in the order the user chose (alphabetical by default), for the panel.
+    var orderedContainers: [DockerContainer] {
+        ContainerOrdering.display(
+            snapshot?.containers ?? [],
+            custom: settings.primary.containerOrder,
+            runningFirst: settings.preferences.dockerRunningFirst
+        )
+    }
+
     /// Where a click on this container should go, given the active route and the user's overrides.
     func containerLink(for container: DockerContainer) -> ContainerLink {
         LinkBuilder.container(container, base: activeBase, overrides: settings.primary.containerOverrides)

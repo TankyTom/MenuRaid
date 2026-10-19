@@ -31,6 +31,8 @@ nonisolated struct ServerConfig: Codable, Identifiable, Equatable, Sendable {
     var containerOverrides: [String: String]
     /// VM name -> VNC web-socket port (the 5700 in `/wsproxy/5700/`). The API doesn't report it.
     var vmConsolePorts: [String: Int]
+    /// Container names in the order the user wants them listed. Empty means alphabetical.
+    var containerOrder: [String]
 
     init(
         id: UUID = UUID(),
@@ -39,7 +41,8 @@ nonisolated struct ServerConfig: Codable, Identifiable, Equatable, Sendable {
         mode: RouteMode = .auto,
         expectedHostname: String? = nil,
         containerOverrides: [String: String] = [:],
-        vmConsolePorts: [String: Int] = [:]
+        vmConsolePorts: [String: Int] = [:],
+        containerOrder: [String] = []
     ) {
         self.id = id
         self.lanAddress = lanAddress
@@ -48,10 +51,11 @@ nonisolated struct ServerConfig: Codable, Identifiable, Equatable, Sendable {
         self.expectedHostname = expectedHostname
         self.containerOverrides = containerOverrides
         self.vmConsolePorts = vmConsolePorts
+        self.containerOrder = containerOrder
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, lanAddress, remoteAddress, mode, expectedHostname, containerOverrides, vmConsolePorts
+        case id, lanAddress, remoteAddress, mode, expectedHostname, containerOverrides, vmConsolePorts, containerOrder
     }
 
     // Lenient, so settings saved by an older version (without newer fields) still load.
@@ -64,6 +68,7 @@ nonisolated struct ServerConfig: Codable, Identifiable, Equatable, Sendable {
         expectedHostname = c.lenient(String.self, .expectedHostname)
         containerOverrides = c.lenient([String: String].self, .containerOverrides) ?? [:]
         vmConsolePorts = c.lenient([String: Int].self, .vmConsolePorts) ?? [:]
+        containerOrder = c.lenient([String].self, .containerOrder) ?? []
     }
 
     var hasAnyAddress: Bool {

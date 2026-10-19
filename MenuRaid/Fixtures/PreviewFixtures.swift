@@ -58,6 +58,18 @@ enum PreviewFixtures {
         return snapshot
     }
 
+    /// A few containers with a newer image available.
+    static var withUpdates: ServerSnapshot {
+        var snapshot = healthy
+        let updating: Set<String> = ["bazarr", "binhex-radarr", "Glances"]
+        snapshot.containers = snapshot.containers?.map { container in
+            var copy = container
+            copy.updateAvailable = updating.contains(container.name)
+            return copy
+        }
+        return snapshot
+    }
+
     static var parityRunning: ServerSnapshot {
         var snapshot = healthy
         snapshot.array?.parityCheck = ParityCheck(running: true, paused: false, progress: 42.5, errors: 0, status: "RUNNING")

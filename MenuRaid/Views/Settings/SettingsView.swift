@@ -10,6 +10,8 @@ struct SettingsView: View {
                 .tabItem { Label("Display", systemImage: "menubar.rectangle") }
             ContainerOverridesView()
                 .tabItem { Label("Links", systemImage: "link") }
+            ContainerOrderView()
+                .tabItem { Label("Docker", systemImage: "shippingbox") }
             #if DEBUG
             TestQueryView()
                 .tabItem { Label("Debug", systemImage: "ladybug") }

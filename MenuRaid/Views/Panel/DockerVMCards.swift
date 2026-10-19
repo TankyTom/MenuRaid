@@ -10,10 +10,11 @@ struct DockerCard: View {
     private static let collapsedCount = 8
 
     var body: some View {
-        let containers = Self.sorted(store.snapshot?.containers ?? [])
+        let containers = store.orderedContainers
         let running = containers.filter(\.state.isRunning).count
         Card("Docker", trailing: {
             HStack(spacing: 8) {
+                if store.containerUpdateCount > 0 { updatesButton }
                 if !containers.isEmpty {
                     Text("\(running) of \(containers.count) running").font(.caption).foregroundStyle(.secondary)
                 }
@@ -37,19 +38,22 @@ struct DockerCard: View {
                     Button(showAll ? "Show fewer" : "Show all \(containers.count)") { showAll.toggle() }
                         .buttonStyle(.plain)
                         .font(.caption.weight(.medium))
-                        .foregroundStyle(Color.accentColor)
+                        .foregroundStyle(Palette.accentIcon)
                 }
             }
         }
     }
 
-    /// Running containers first, each group alphabetical.
-    static func sorted(_ containers: [DockerContainer]) -> [DockerContainer] {
-        containers.sorted {
-            let a = ($0.state.isRunning ? 0 : 1, $0.name.lowercased())
-            let b = ($1.state.isRunning ? 0 : 1, $1.name.lowercased())
-            return a < b
+    /// "3 updates": small, and a click opens Unraid's Docker page, where updates are applied.
+    private var updatesButton: some View {
+        let count = store.containerUpdateCount
+        return Button { store.open(.docker) } label: {
+            Label("\(count) update\(count == 1 ? "" : "s")", systemImage: "arrow.up.circle.fill")
+                .font(.caption.weight(.medium))
+                .foregroundStyle(Palette.accentIcon)
         }
+        .buttonStyle(.plain)
+        .help("\(count) container\(count == 1 ? " has" : "s have") a newer image. Open the Docker page in Unraid to update.")
     }
 }
 
@@ -81,6 +85,13 @@ struct ContainerRow: View {
             Spacer(minLength: 6)
             if let note {
                 Text(note.text).font(.caption).foregroundStyle(note.color).lineLimit(1)
+            }
+            if container.updateAvailable == true {
+                Image(systemName: "arrow.up.circle.fill")
+                    .font(.caption)
+                    .foregroundStyle(Palette.accentIcon)
+                    .help("A newer image is available for \(container.name)")
+                    .accessibilityLabel("Update available")
             }
             Image(systemName: "arrow.up.right")
                 .font(.caption.weight(.semibold))

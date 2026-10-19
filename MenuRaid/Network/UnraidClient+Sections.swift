@@ -15,8 +15,12 @@ extension UnraidClient {
         return try await ArrayInfo.make(array: main, extras: extras, parity: parity)
     }
 
+    /// The container list is required; the extras (update flags, template ports) are best-effort, so a server that
+    /// doesn't report them (or a failure of that one query) still shows its containers.
     func fetchContainers(base: URL, apiKey: String, timeout: TimeInterval = 8) async throws -> [DockerContainer] {
-        try await query(Queries.docker, as: DockerResponse.self, base: base, apiKey: apiKey, timeout: timeout).containers
+        async let main = query(Queries.docker, as: DockerResponse.self, base: base, apiKey: apiKey, timeout: timeout)
+        async let extras = try? query(Queries.dockerExtras, as: DockerExtrasResponse.self, base: base, apiKey: apiKey, timeout: timeout)
+        return try await DockerContainer.applying(extras, to: main.containers)
     }
 
     func fetchVMs(base: URL, apiKey: String, timeout: TimeInterval = 8) async throws -> [VirtualMachine] {

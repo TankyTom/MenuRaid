@@ -54,6 +54,8 @@ nonisolated struct AppPreferences: Codable, Equatable, Sendable {
     var thresholds = Thresholds()
     /// The one-time "your key is sent unencrypted over http://" notice has been dismissed.
     var httpWarningDismissed = false
+    /// List running containers above stopped ones (within the chosen order).
+    var dockerRunningFirst = true
 
     init() {}
 
@@ -65,5 +67,6 @@ nonisolated struct AppPreferences: Codable, Equatable, Sendable {
         appearance = c.lenient(AppearanceMode.self, .appearance) ?? .system
         thresholds = c.lenient(Thresholds.self, .thresholds) ?? Thresholds()
         httpWarningDismissed = c.lenient(Bool.self, .httpWarningDismissed) ?? false
+        dockerRunningFirst = c.lenient(Bool.self, .dockerRunningFirst) ?? true
     }
 }

@@ -96,7 +96,9 @@ nonisolated enum LinkBuilder {
         }
 
         guard let host else { return .unavailable(.noServer) }
-        guard let port = container.ports
+        // Live ports first; while a container is stopped Docker reports none, so fall back to the template's.
+        let candidates = container.ports.isEmpty ? (container.templatePorts ?? []) : container.ports
+        guard let port = candidates
             .filter({ $0.isTCP && ($0.publicPort ?? 0) > 0 })
             .compactMap(\.publicPort)
             .min()
@@ -136,13 +138,20 @@ nonisolated enum LinkBuilder {
         return parseOverride(text)
     }
 
-    /// The port to use for a container port. A published mapping wins. A container with no port mappings at all
-    /// is on the host network (or has its own address), where the container port is the port on the server.
+    /// The port to use for a container port, in order:
+    /// 1. a live published mapping (Docker's current view);
+    /// 2. the template's mapping, which is still there while the container is stopped (Docker then reports no ports);
+    /// 3. the container port itself, but only if neither source knows of any mapping: that's a host-network container,
+    ///    where the container port is the port on the server.
+    /// A container that has mappings, none of them for this port, is a bridge container that doesn't publish it.
     private static func publicPort(forPrivatePort privatePort: Int, in container: DockerContainer) -> Int? {
-        if let mapped = container.ports.first(where: { $0.isTCP && $0.privatePort == privatePort && ($0.publicPort ?? 0) > 0 })?.publicPort {
-            return mapped
+        func mapped(_ ports: [PortMapping]) -> Int? {
+            ports.first { $0.isTCP && $0.privatePort == privatePort && ($0.publicPort ?? 0) > 0 }?.publicPort
         }
-        return container.ports.isEmpty ? privatePort : nil
+        if let live = mapped(container.ports) { return live }
+        if let template = mapped(container.templatePorts ?? []) { return template }
+        let knowsAnyMapping = !container.ports.isEmpty || !(container.templatePorts ?? []).isEmpty
+        return knowsAnyMapping ? nil : privatePort
     }
 
     /// IPv6 literals need brackets in a URL; the stored host has none.

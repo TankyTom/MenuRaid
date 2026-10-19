@@ -130,15 +130,16 @@ struct HTTPWarningCard: View {
 
 struct PanelHeader: View {
     @Environment(ServerStore.self) private var store
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         let overview = store.snapshot?.overview
         HStack(spacing: 10) {
             Image(systemName: "externaldrive.fill")
                 .font(.system(size: 17, weight: .semibold))
-                .foregroundStyle(Color.accentColor)
+                .foregroundStyle(Palette.accentIcon)
                 .frame(width: 36, height: 36)
-                .background(Color.accentColor.opacity(0.18), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+                .background(Color.accentColor.opacity(colorScheme == .dark ? 0.32 : 0.18), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 1) {

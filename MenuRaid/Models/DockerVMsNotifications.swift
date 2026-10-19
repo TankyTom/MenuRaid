@@ -51,6 +51,11 @@ nonisolated struct DockerContainer: Codable, Equatable, Identifiable, Sendable {
     /// The container's WebUI setting from its Unraid template, e.g. `http://[IP]:[PORT:8112]/`.
     /// Placeholders are filled in by `LinkBuilder` using the address in use.
     var webUITemplate: String?
+    /// A newer image is available for this container. nil when the server didn't say.
+    var updateAvailable: Bool?
+    /// Port mappings from the container's Unraid template. Unlike `ports` (Docker's live view, empty while the
+    /// container is stopped), these are always there. nil when the server didn't say.
+    var templatePorts: [PortMapping]?
 
     /// The label Unraid writes from a container's template, and the one its own WebUI button reads.
     /// (Some images set other labels of their own, such as `com.unraid.template.webui`; Unraid ignores those.)
@@ -101,6 +106,62 @@ nonisolated struct DockerResponse: Decodable, Sendable {
                 state: ContainerState(api: item.state), statusText: item.status, ports: item.ports,
                 webUITemplate: item.webUITemplate
             )
+        }
+    }
+}
+
+/// Response of `Queries.dockerExtras`, keyed by container name.
+nonisolated struct DockerExtrasResponse: Decodable, Sendable {
+    /// Which containers have a newer image. Containers where the server gave no answer are absent.
+    var updates: [String: Bool]
+    var templatePorts: [String: [PortMapping]]
+
+    init(updates: [String: Bool] = [:], templatePorts: [String: [PortMapping]] = [:]) {
+        self.updates = updates
+        self.templatePorts = templatePorts
+    }
+
+    private enum Root: String, CodingKey { case docker }
+    private enum Keys: String, CodingKey { case containers }
+
+    private struct Raw: Decodable {
+        var names: [String]
+        var isUpdateAvailable: Bool?
+        var templatePorts: [PortMapping]?
+        private enum Keys: String, CodingKey { case names, isUpdateAvailable, templatePorts }
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: Keys.self)
+            names = c.lenient([String].self, .names) ?? []
+            isUpdateAvailable = c.lenient(Bool.self, .isUpdateAvailable)
+            templatePorts = c.lenient([Lossy<PortMapping>].self, .templatePorts)?.compactMap(\.value)
+        }
+    }
+
+    init(from decoder: Decoder) throws {
+        let docker = try decoder.container(keyedBy: Root.self).nestedContainer(keyedBy: Keys.self, forKey: .docker)
+        let raw: [Raw] = docker.lenientArray(.containers)
+        var flags: [String: Bool] = [:]
+        var ports: [String: [PortMapping]] = [:]
+        for item in raw {
+            guard let first = item.names.first else { continue }
+            let name = first.hasPrefix("/") ? String(first.dropFirst()) : first
+            if let flag = item.isUpdateAvailable { flags[name] = flag }
+            if let template = item.templatePorts { ports[name] = template }
+        }
+        updates = flags
+        templatePorts = ports
+    }
+}
+
+extension DockerContainer {
+    /// Adds the best-effort extras (update flags, template ports), matched by name, to a container list.
+    nonisolated static func applying(_ extras: DockerExtrasResponse?, to containers: [DockerContainer]) -> [DockerContainer] {
+        guard let extras else { return containers }
+        return containers.map { container in
+            var copy = container
+            copy.updateAvailable = extras.updates[container.name]
+            copy.templatePorts = extras.templatePorts[container.name]
+            return copy
         }
     }
 }

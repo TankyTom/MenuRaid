@@ -11,7 +11,9 @@ struct StatusCard: View {
 
     var body: some View {
         let level = store.health?.level
-        Card("Status", tint: level == .green || level == nil ? nil : Palette.color(for: level)) {
+        Card("Status", tint: level == .green || level == nil ? nil : Palette.color(for: level), spacing: 8, trailing: {
+            if let health = store.health { shortcuts(health) }
+        }) {
             if let message = store.setupMessage {
                 Text(message).font(.callout).foregroundStyle(.secondary)
                 Button("Open Settings") { showSettings() }
@@ -19,7 +21,6 @@ struct StatusCard: View {
                 headline(health)
                 reasons(health)
                 connectionNotes
-                shortcuts(health)
                 chips
             } else {
                 LoadingRow()
@@ -30,17 +31,16 @@ struct StatusCard: View {
     // MARK: Headline
 
     private func headline(_ health: Health) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
-            HStack(spacing: 10) {
-                Image(systemName: StatusGlyph.symbol(for: health.level))
-                    .font(.system(size: 26, weight: .semibold))
-                Text(title(for: health.level))
-                    .font(.system(size: 30, weight: .bold))
-            }
-            .foregroundStyle(Palette.color(for: health.level))
-
-            if let summary = Self.summary(for: health) {
-                Text(summary).font(.callout).foregroundStyle(.secondary)
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            LevelIcon(level: health.level, size: 21)
+            Text(title(for: health.level))
+                .font(.system(size: 22, weight: .bold))
+                .foregroundStyle(Palette.color(for: health.level))
+            Spacer(minLength: 4)
+            // One reason explains itself, so the count is only worth showing for several.
+            if health.reasons.count > 1, let summary = Self.summary(for: health) {
+                // Neutral, not red: red-on-red is hard to read.
+                Text(summary).font(.caption).foregroundStyle(.primary.opacity(0.7))
             }
         }
         .accessibilityElement(children: .combine)
@@ -87,14 +87,13 @@ struct StatusCard: View {
         }
     }
 
-    /// Quick links for digging in: only shown when there's something to look into.
+    /// Quick links for digging in, as small icons in the card's title row. Only when there's something to look into.
     @ViewBuilder
     private func shortcuts(_ health: Health) -> some View {
-        if !health.reasons.isEmpty, store.activeBase != nil {
-            HStack(spacing: 8) {
-                ShortcutButton(page: .systemLog, symbol: "doc.text.magnifyingglass") { store.open(.systemLog) }
-                ShortcutButton(page: .notifications, symbol: "bell") { store.open(.notifications) }
-                ShortcutButton(page: .main, symbol: "externaldrive") { store.open(.main) }
+        if !health.reasons.isEmpty, store.linkBase != nil {
+            HStack(spacing: 10) {
+                ShortcutIcon(page: .systemLog, symbol: "doc.text.magnifyingglass") { store.open(.systemLog) }
+                ShortcutIcon(page: .notifications, symbol: "bell") { store.open(.notifications) }
             }
         }
     }
@@ -134,16 +133,13 @@ struct StatusCard: View {
         }
     }
 
+    /// Only the unusual states: the Array card already shows the array's state.
+    @ViewBuilder
     private var chips: some View {
-        HStack(spacing: 6) {
-            if let array = store.snapshot?.array {
-                Chip(text: "Array · \(array.state?.capitalized ?? "Unknown")", color: array.isStarted ? Palette.ok : Palette.bad)
-            }
-            if store.isShowingCache {
-                Chip(text: "Saved data", color: Palette.warn)
-            } else if store.isUnreachable {
-                Chip(text: "Offline", color: Palette.bad)
-            }
+        if store.isShowingCache {
+            Chip(text: "Saved data", color: Palette.warn)
+        } else if store.isUnreachable {
+            Chip(text: "Offline", color: Palette.bad)
         }
     }
 
@@ -176,9 +172,7 @@ private struct ReasonRow: View {
 
     private func content(link: ReasonLink?) -> some View {
         HStack(spacing: 10) {
-            Image(systemName: reason.level == .red ? "xmark.octagon.fill" : "exclamationmark.triangle.fill")
-                .foregroundStyle(Palette.color(for: reason.level))
-                .frame(width: 18)
+            LevelIcon(level: reason.level, size: 15)
             Text(reason.message)
                 .font(.callout)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -190,7 +184,7 @@ private struct ReasonRow: View {
                     .opacity(isHovering ? 1 : 0.6)
             }
         }
-        .padding(.vertical, 7)
+        .padding(.vertical, 5)
         .padding(.horizontal, 8)
         .background(.primary.opacity(isHovering && link != nil ? 0.08 : 0))
         .contentShape(Rectangle())
@@ -204,23 +198,18 @@ private struct ReasonRow: View {
     }
 }
 
-/// A small pill button that opens a page of the Unraid webGUI.
-private struct ShortcutButton: View {
+/// A small icon button that opens a page of the Unraid webGUI; the name is in the tooltip.
+private struct ShortcutIcon: View {
     let page: LinkBuilder.Page
     let symbol: String
     let action: () -> Void
 
     var body: some View {
-        Button(action: action) {
-            Label(page.title, systemImage: symbol)
-                .font(.caption.weight(.medium))
-                .lineLimit(1)
-                .padding(.horizontal, 9)
-                .padding(.vertical, 5)
-                .background(.primary.opacity(0.08), in: Capsule())
-        }
-        .buttonStyle(.plain)
-        .help("Open the \(page.title) in Unraid")
+        Button(action: action) { Image(systemName: symbol) }
+            .buttonStyle(.plain)
+            .foregroundStyle(.secondary)
+            .help("Open the \(page.title) in Unraid")
+            .accessibilityLabel("Open the \(page.title)")
     }
 }
 
