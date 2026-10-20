@@ -2,15 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>LSApplicationCategoryType</key>
-	<string>public.app-category.utilities</string>
-	<key>NSLocalNetworkUsageDescription</key>
-	<string>MenuRaid connects to your Unraid server on your local network to read its status.</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
-		<!-- MenuRaid only connects to the server addresses the user types in, which are often plain http://
-		     (a home LAN, or a Tailscale/MagicDNS name). NSAllowsLocalNetworking would only cover IPs and .local names,
-		     and its presence makes macOS ignore NSAllowsArbitraryLoads, so it is deliberately not set. -->
 		<key>NSAllowsArbitraryLoads</key>
 		<true/>
 	</dict>

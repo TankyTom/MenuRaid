@@ -6,8 +6,19 @@
 	objectVersion = 90;
 	objects = {
 
+/* Begin PBXContainerItemProxy section */
+		27ACC1EF3086FADC00ED9764 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 000000000000000000000000 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 000000000000000100000000;
+			remoteInfo = MenuRaid;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		000000000000000000000120 /* MenuRaid.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MenuRaid.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		27ACC1EB3086FADC00ED9764 /* MenuRaidTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MenuRaidTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -29,10 +40,20 @@
 			path = MenuRaid;
 			sourceTree = "<group>";
 		};
+		27ACC1EC3086FADC00ED9764 /* MenuRaidTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = MenuRaidTests;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		000000000000000130000000 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+			);
+		};
+		27ACC1E83086FADC00ED9764 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			files = (
 			);
@@ -44,6 +65,7 @@
 			isa = PBXGroup;
 			children = (
 				000000000000000000000010 /* MenuRaid */,
+				27ACC1EC3086FADC00ED9764 /* MenuRaidTests */,
 				000000000000000000000020 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -52,6 +74,7 @@
 			isa = PBXGroup;
 			children = (
 				000000000000000000000120 /* MenuRaid.app */,
+				27ACC1EB3086FADC00ED9764 /* MenuRaidTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -77,6 +100,27 @@
 			productReference = 000000000000000000000120 /* MenuRaid.app */;
 			productType = "com.apple.product-type.application";
 		};
+		27ACC1EA3086FADC00ED9764 /* MenuRaidTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 27ACC1F13086FADC00ED9764 /* Build configuration list for PBXNativeTarget "MenuRaidTests" */;
+			buildPhases = (
+				27ACC1E73086FADC00ED9764 /* Sources */,
+				27ACC1E83086FADC00ED9764 /* Frameworks */,
+				27ACC1E93086FADC00ED9764 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				27ACC1F03086FADC00ED9764 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				27ACC1EC3086FADC00ED9764 /* MenuRaidTests */,
+			);
+			name = MenuRaidTests;
+			productName = MenuRaidTests;
+			productReference = 27ACC1EB3086FADC00ED9764 /* MenuRaidTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -84,11 +128,15 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 2630;
+				LastSwiftUpdateCheck = 2710;
 				LastUpgradeCheck = 2700;
 				TargetAttributes = {
 					000000000000000100000000 = {
 						CreatedOnToolsVersion = 26.3;
+					};
+					27ACC1EA3086FADC00ED9764 = {
+						CreatedOnToolsVersion = 27.1;
+						TestTargetID = 000000000000000100000000;
 					};
 				};
 			};
@@ -107,12 +155,18 @@
 			projectRoot = "";
 			targets = (
 				000000000000000100000000 /* MenuRaid */,
+				27ACC1EA3086FADC00ED9764 /* MenuRaidTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		000000000000000140000000 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+			);
+		};
+		27ACC1E93086FADC00ED9764 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			files = (
 			);
@@ -125,7 +179,20 @@
 			files = (
 			);
 		};
+		27ACC1E73086FADC00ED9764 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+			);
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		27ACC1F03086FADC00ED9764 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 000000000000000100000000 /* MenuRaid */;
+			targetProxy = 27ACC1EF3086FADC00ED9764 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		000000000000000011000000 /* Debug configuration for PBXProject "MenuRaid" */ = {
@@ -263,6 +330,8 @@
 		000000000000000111000000 /* Debug configuration for PBXNativeTarget "MenuRaid" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = DM7437997T;
@@ -281,9 +350,9 @@
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = MenuRaid/Info.plist;
-				INFOPLIST_KEY_LSApplicationCategoryType = "";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_LSUIElement = YES;
-				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "MenuRaid connects to your Unraid server on your local network to read its status.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -297,7 +366,7 @@
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 14.6;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "devplaceholder.$(PROJECT_UNIQUE_VALUE:identifier).$(PRODUCT_NAME:rfc1034identifier)";
+				PRODUCT_BUNDLE_IDENTIFIER = com.kylereid.MenuRaid;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				SDKROOT = auto;
@@ -315,6 +384,8 @@
 		000000000000000112000000 /* Release configuration for PBXNativeTarget "MenuRaid" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = DM7437997T;
@@ -333,9 +404,9 @@
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = MenuRaid/Info.plist;
-				INFOPLIST_KEY_LSApplicationCategoryType = "";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_LSUIElement = YES;
-				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "MenuRaid connects to your Unraid server on your local network to read its status.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -349,7 +420,7 @@
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 14.6;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "devplaceholder.$(PROJECT_UNIQUE_VALUE:identifier).$(PRODUCT_NAME:rfc1034identifier)";
+				PRODUCT_BUNDLE_IDENTIFIER = com.kylereid.MenuRaid;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				SDKROOT = auto;
@@ -361,6 +432,48 @@
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		27ACC1F23086FADC00ED9764 /* Debug configuration for PBXNativeTarget "MenuRaidTests" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = DM7437997T;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.you.aloft.MenuRaidTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MenuRaid.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/MenuRaid";
+			};
+			name = Debug;
+		};
+		27ACC1F33086FADC00ED9764 /* Release configuration for PBXNativeTarget "MenuRaidTests" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = DM7437997T;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.you.aloft.MenuRaidTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MenuRaid.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/MenuRaid";
 			};
 			name = Release;
 		};
@@ -380,6 +493,14 @@
 			buildConfigurations = (
 				000000000000000111000000 /* Debug configuration for PBXNativeTarget "MenuRaid" */,
 				000000000000000112000000 /* Release configuration for PBXNativeTarget "MenuRaid" */,
+			);
+			defaultConfigurationName = Release;
+		};
+		27ACC1F13086FADC00ED9764 /* Build configuration list for PBXNativeTarget "MenuRaidTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				27ACC1F23086FADC00ED9764 /* Debug configuration for PBXNativeTarget "MenuRaidTests" */,
+				27ACC1F33086FADC00ED9764 /* Release configuration for PBXNativeTarget "MenuRaidTests" */,
 			);
 			defaultConfigurationName = Release;
 		};
