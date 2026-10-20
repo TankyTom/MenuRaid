@@ -8,6 +8,7 @@ Version 1 is **read-only**: it never starts, stops or changes anything on your s
 
 ## What you get
 
+- **At home or away, every click just works:** MenuRaid uses your LAN address when your server answers there and your remote address (for example Tailscale) otherwise, and switches by itself when your network changes: when you leave the house, when you get back, when your Mac wakes. Every link it opens (the Unraid dashboard, terminal and file manager, a container's web UI, a VM's console) goes through whichever address you're using right now, so the same click opens the right place on the couch or on the road. You never edit a link when you leave home. The house or globe icon in the panel shows which route is active.
 - **Menu bar:** a status symbol (check, triangle or octagon, so it never relies on colour alone) plus one value you choose: CPU %, RAM %, hottest disk temperature, or icon only.
 - **Status:** green, amber or red, with the reasons spelled out.
   - Red: array not started, a disk disabled/missing/invalid, any disk with errors, a disk at its critical temperature, or the server unreachable.
@@ -20,7 +21,6 @@ Version 1 is **read-only**: it never starts, stops or changes anything on your s
 - **Update hint (optional):** a small "↑ 7.3.3" beside the Unraid version when a newer stable release exists, and a small "↑ N updates" in the Docker header for containers with a newer image.
 - **MenuRaid update hint (optional):** a small download arrow in the footer when a newer MenuRaid has been released on GitHub. Click it to open the download page.
 - **Footer:** unread notification count, open the Unraid webGUI, light/dark switch, Settings, Quit.
-- **At home or away:** it uses your LAN address when your server answers there and your remote address (for example Tailscale) otherwise, and switches by itself when your network changes.
 
 ## Requirements
 
@@ -56,6 +56,8 @@ The decision is remembered and checked again only when your network changes, you
 If you rename your server, MenuRaid stops using the LAN address (it no longer matches the saved name) and says so. Use **Reset** next to "Server identity" in Settings → Connection, and do it at home on your own network: after a reset the next connection is a first connection again, so it accepts whatever answers at that address and saves its name. This is deliberately manual. If MenuRaid trusted a changed name on its own, the check would protect nothing.
 
 ## Where clicks go
+
+Every link below is built from the address MenuRaid is connected through, so it follows you between your LAN and your remote address automatically: `[IP]` in a container's WebUI setting, the fallback port, VM consoles and the Unraid pages in the panel's header and footer all switch with the route. The one exception is your own **overrides**, which are opened exactly as written.
 
 **Containers** open, in this order:
 1. **Your override** (Settings → Links): any URL, opened exactly as written. Use it for reverse proxies and tunnels.
