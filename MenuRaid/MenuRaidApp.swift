@@ -8,7 +8,9 @@ struct MenuRaidApp: App {
     init() {
         let settings = SettingsStore()
         _settings = State(initialValue: settings)
-        _store = State(initialValue: ServerStore(settings: settings))
+        let store = ServerStore(settings: settings)
+        store.activateNotifications()
+        _store = State(initialValue: store)
     }
 
     var body: some Scene {

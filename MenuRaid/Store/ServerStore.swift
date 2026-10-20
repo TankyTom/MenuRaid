@@ -62,6 +62,9 @@ final class ServerStore {
     private let keychain: KeychainStore
     private let cache: SnapshotCache
     private let releaseFetcher: ReleaseFetching
+    private let notifier: Notifying
+    private var problemDetector = ProblemDetector()
+    private var notificationTasks: [Task<Void, Never>] = []
 
     private var loopTask: Task<Void, Never>?
     private var sleepObserver: Task<Void, Never>?
@@ -82,10 +85,12 @@ final class ServerStore {
         client: UnraidClient = UnraidClient(),
         keychain: KeychainStore = KeychainStore(),
         releaseFetcher: ReleaseFetching = ReleaseChecker(),
+        notifier: Notifying = SystemNotifier(),
         autostart: Bool = true
     ) {
         self.settings = settings
         self.releaseFetcher = releaseFetcher
+        self.notifier = notifier
         self.client = client
         self.keychain = keychain
         self.cache = SnapshotCache(serverID: settings.primary.id)
@@ -243,6 +248,45 @@ final class ServerStore {
             // Keep whatever we knew; just don't try again for a while.
             lastReleaseFailure = now
         }
+    }
+
+    // MARK: - Problem notifications
+
+    /// Hooks up clicks on notifications (opens the Unraid Main tab). Called once at launch by the app.
+    func activateNotifications() {
+        notifier.activate { [weak self] in self?.open(.main) }
+    }
+
+    /// Called when the setting is switched on. Asks macOS for permission if needed; returns the result so the
+    /// settings screen can explain a refusal.
+    func enableNotifications() async -> NotificationAuthorization {
+        switch await notifier.authorizationStatus() {
+        case .allowed: return .allowed
+        case .denied: return .denied
+        case .notDetermined: return await notifier.requestAuthorization() ? .allowed : .denied
+        }
+    }
+
+    func sendTestNotification() {
+        let task = Task { [notifier] in await notifier.post(.test) }
+        notificationTasks.append(task)
+    }
+
+    /// Looks for problems that weren't there at the last evaluation and, if switched on, tells you about them.
+    /// Runs whether or not notifications are on, so turning them on later doesn't announce old problems.
+    private func notifyAboutNewProblems(in health: Health) {
+        let fresh = problemDetector.newProblems(in: health)
+        guard settings.preferences.notifyOnProblems, !fresh.isEmpty else { return }
+        let content = ProblemNotification.make(hostname: snapshot?.overview?.hostname, reasons: fresh)
+        let task = Task { [notifier] in await notifier.post(content) }
+        notificationTasks.append(task)
+    }
+
+    /// Lets tests wait for notifications that were queued.
+    func waitForNotifications() async {
+        let tasks = notificationTasks
+        notificationTasks = []
+        for task in tasks { await task.value }
     }
 
     /// Called when the setting is switched on, so the badge doesn't wait for the next scheduled check.
@@ -576,12 +620,14 @@ final class ServerStore {
             health = nil
             return
         }
-        health = HealthEvaluator.evaluate(
+        let evaluated = HealthEvaluator.evaluate(
             snapshot: snapshot,
             thresholds: settings.preferences.thresholds,
             isStale: isStale,
             isUnreachable: isUnreachable
         )
+        health = evaluated
+        notifyAboutNewProblems(in: evaluated)
     }
 }
 

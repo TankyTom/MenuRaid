@@ -5,6 +5,7 @@ struct DisplaySettingsView: View {
     @Environment(SettingsStore.self) private var settings
     @Environment(ServerStore.self) private var store
     @State private var launchAtLogin = LaunchAtLogin()
+    @State private var notificationNote: String?
 
     var body: some View {
         @Bindable var settings = settings
@@ -36,6 +37,38 @@ struct DisplaySettingsView: View {
                 Text("Startup")
             }
 
+
+            Section {
+                Toggle("Notify me when a new problem appears", isOn: $settings.preferences.notifyOnProblems)
+                    .onChange(of: settings.preferences.notifyOnProblems) { _, enabled in
+                        guard enabled else { notificationNote = nil; return }
+                        Task {
+                            if await store.enableNotifications() == .allowed {
+                                notificationNote = nil
+                            } else {
+                                settings.preferences.notifyOnProblems = false
+                                notificationNote = "macOS isn't allowing notifications for MenuRaid. Allow them in System Settings → Notifications → MenuRaid, then switch this on again."
+                            }
+                        }
+                    }
+                if let notificationNote {
+                    Label(notificationNote, systemImage: "bell.slash")
+                        .font(.caption).foregroundStyle(Palette.warn)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Button("Open Notification Settings…") {
+                        if let url = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension") {
+                            NSWorkspace.shared.open(url)
+                        }
+                    }
+                }
+                if settings.preferences.notifyOnProblems {
+                    Button("Send a test notification") { store.sendTestNotification() }
+                }
+            } header: {
+                Text("Notifications")
+            } footer: {
+                Text("Shows a macOS notification when a new red problem appears: a disabled disk, disk errors, a critical temperature, or the array stopped. It doesn't notify when the server is merely unreachable, because MenuRaid can't tell that from your Mac being offline. Notifications stay on this Mac; nothing is sent anywhere. MenuRaid must be running to notice, so this complements Unraid's own email and push alerts rather than replacing them.")
+            }
 
             Section {
                 Toggle("Check for Unraid OS updates", isOn: $settings.preferences.checkForOSUpdates)

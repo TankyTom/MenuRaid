@@ -61,6 +61,8 @@ nonisolated struct AppPreferences: Codable, Equatable, Sendable {
     /// Ask Unraid's public release server which version is the latest stable. Off by default: it is the one
     /// request MenuRaid makes to anything other than your own server.
     var checkForOSUpdates = false
+    /// Show a macOS notification when a new problem (a red status) appears. Off until you turn it on.
+    var notifyOnProblems = false
 
     init() {}
 
@@ -75,5 +77,6 @@ nonisolated struct AppPreferences: Codable, Equatable, Sendable {
         remoteHTTPWarningDismissed = c.lenient(Bool.self, .remoteHTTPWarningDismissed) ?? false
         dockerRunningFirst = c.lenient(Bool.self, .dockerRunningFirst) ?? true
         checkForOSUpdates = c.lenient(Bool.self, .checkForOSUpdates) ?? false
+        notifyOnProblems = c.lenient(Bool.self, .notifyOnProblems) ?? false
     }
 }

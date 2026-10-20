@@ -150,12 +150,14 @@ struct HealthEvaluatorTests {
         #expect(StatusCard.heading(for: evaluate(snapshot(disks: [disk(errors: 1)], notifications: alert))) == "Problems")
     }
 
+    private struct FixtureEnvelope<T: Decodable>: Decodable { let data: T }
+
+    private func load<T: Decodable>(_ type: T.Type, _ name: String) throws -> T {
+        let json = try #require(FixtureJSON.named(name), "missing fixture \(name)")
+        return try JSONDecoder().decode(FixtureEnvelope<T>.self, from: Data(json.utf8)).data
+    }
+
     @Test func realServerWithDisabledDiskIsRed() throws {
-        struct Envelope<T: Decodable>: Decodable { let data: T }
-        func load<T: Decodable>(_ type: T.Type, _ name: String) throws -> T {
-            let json = try #require(FixtureJSON.named(name))
-            return try JSONDecoder().decode(Envelope<T>.self, from: Data(json.utf8)).data
-        }
         var snap = snapshot()
         snap.array = ArrayInfo.make(
             array: try load(ArrayResponse.self, "array"),
