@@ -264,6 +264,7 @@ struct PanelFooter: View {
         HStack(spacing: 14) {
             freshness
             Spacer()
+            appUpdateBadge
             notifications
             iconButton(colorScheme == .dark ? "sun.max" : "moon", help: colorScheme == .dark ? "Switch to light mode" : "Switch to dark mode") {
                 settings.appearanceOverride = colorScheme == .dark ? .light : .dark
@@ -303,6 +304,19 @@ struct PanelFooter: View {
         if store.isUnreachable { return Palette.bad }
         if store.isShowingCache || store.isStale { return Palette.warn }
         return store.lastSuccess == nil ? Palette.idle : Palette.ok
+    }
+
+    /// A small download arrow when a newer MenuRaid has been released. Click to open its GitHub release page.
+    @ViewBuilder
+    private var appUpdateBadge: some View {
+        if let update = store.appUpdate {
+            Button { NSWorkspace.shared.open(update.latest.pageURL) } label: {
+                Image(systemName: "arrow.down.circle.fill").foregroundStyle(Palette.accentIcon)
+            }
+            .buttonStyle(.plain)
+            .help("MenuRaid \(update.latest.version) is available (you have \(update.current)). Click to open the download page.")
+            .accessibilityLabel("MenuRaid \(update.latest.version) is available")
+        }
     }
 
     @ViewBuilder

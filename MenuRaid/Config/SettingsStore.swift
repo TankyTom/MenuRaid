@@ -7,6 +7,7 @@ final class SettingsStore {
     private static let serversKey = "servers.v1"
     private static let preferencesKey = "preferences.v1"
     private static let releaseKey = "latestRelease.v1"
+    private static let appReleaseKey = "latestAppRelease.v1"
 
     /// All configured servers. Version 1 uses a single entry, but the list keeps multi-server open.
     private(set) var servers: [ServerConfig]
@@ -21,6 +22,14 @@ final class SettingsStore {
     func recordLatestRelease(_ release: LatestRelease?) {
         latestRelease = release
         if let release { save(release, key: Self.releaseKey) } else { defaults.removeObject(forKey: Self.releaseKey) }
+    }
+
+    /// The latest MenuRaid release seen at the last successful check.
+    private(set) var latestAppRelease: AppRelease?
+
+    func recordLatestAppRelease(_ release: AppRelease?) {
+        latestAppRelease = release
+        if let release { save(release, key: Self.appReleaseKey) } else { defaults.removeObject(forKey: Self.appReleaseKey) }
     }
 
     /// Set by the footer sun/moon button. Not saved, so the default from Settings applies on next launch.
@@ -43,6 +52,9 @@ final class SettingsStore {
         if let data = defaults.data(forKey: Self.releaseKey) {
             let decoder = JSONDecoder()
             latestRelease = try? decoder.decode(LatestRelease.self, from: data)
+        }
+        if let data = defaults.data(forKey: Self.appReleaseKey) {
+            latestAppRelease = try? JSONDecoder().decode(AppRelease.self, from: data)
         }
         if let data = defaults.data(forKey: Self.preferencesKey),
            let decoded = try? JSONDecoder().decode(AppPreferences.self, from: data) {

@@ -79,10 +79,19 @@ struct DisplaySettingsView: View {
                     Text("Latest stable release: Unraid \(latest.version)\(latest.date.map { " (\($0))" } ?? "")")
                         .font(.caption).foregroundStyle(.secondary)
                 }
+
+                Toggle("Check for MenuRaid updates", isOn: $settings.preferences.checkForAppUpdates)
+                    .onChange(of: settings.preferences.checkForAppUpdates) { _, enabled in
+                        if enabled { store.checkForAppUpdateNow() }
+                    }
+                if settings.preferences.checkForAppUpdates, let latest = settings.latestAppRelease {
+                    Text("Latest MenuRaid release: \(latest.version)")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
             } header: {
                 Text("Updates")
             } footer: {
-                Text("Off by default. When on, MenuRaid asks Unraid's public release server (releases.unraid.net) for the latest stable version about every 6 hours and compares it with your server's. It sends nothing about your server: no version, hostname or API key. This is the only request MenuRaid makes to anything other than your own server.")
+                Text("Both are off by default. The Unraid check asks Unraid's public release server (releases.unraid.net) for the latest stable version about every 6 hours and compares it with your server's. The MenuRaid check asks GitHub (api.github.com) for MenuRaid's latest release and compares it with the version you have installed. Neither sends anything about you or your server: no version, hostname or API key. These are the only requests MenuRaid makes to anything other than your own server.")
             }
 
             Section {

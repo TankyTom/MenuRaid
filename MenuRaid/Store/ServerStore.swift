@@ -62,6 +62,8 @@ final class ServerStore {
     private let keychain: KeychainStore
     private let cache: SnapshotCache
     private let releaseFetcher: ReleaseFetching
+    private let appReleaseFetcher: AppReleaseFetching
+    private let installedVersion: String?
     private let notifier: Notifying
     private var problemDetector = ProblemDetector()
     private var notificationTasks: [Task<Void, Never>] = []
@@ -78,6 +80,8 @@ final class ServerStore {
     private var lastCacheWrite: Date?
     private var lastReleaseFailure: Date?
     private var isCheckingRelease = false
+    private var lastAppReleaseFailure: Date?
+    private var isCheckingAppRelease = false
     private var didPromptForSetup = false
 
     init(
@@ -85,11 +89,15 @@ final class ServerStore {
         client: UnraidClient = UnraidClient(),
         keychain: KeychainStore = KeychainStore(),
         releaseFetcher: ReleaseFetching = ReleaseChecker(),
+        appReleaseFetcher: AppReleaseFetching = AppUpdateChecker(),
+        installedVersion: String? = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String,
         notifier: Notifying = SystemNotifier(),
         autostart: Bool = true
     ) {
         self.settings = settings
         self.releaseFetcher = releaseFetcher
+        self.appReleaseFetcher = appReleaseFetcher
+        self.installedVersion = installedVersion
         self.notifier = notifier
         self.client = client
         self.keychain = keychain
@@ -248,6 +256,35 @@ final class ServerStore {
             // Keep whatever we knew; just don't try again for a while.
             lastReleaseFailure = now
         }
+    }
+
+    /// A newer MenuRaid than the installed one, if the (opt-in) app update check is on and has found one.
+    var appUpdate: AppUpdate? {
+        guard settings.preferences.checkForAppUpdates else { return nil }
+        return AppUpdate.compare(current: installedVersion, latest: settings.latestAppRelease)
+    }
+
+    /// Asks GitHub for the latest MenuRaid release, if the user opted in and it's due.
+    /// `force` skips the schedule (used when the setting is switched on).
+    func checkForAppUpdateIfNeeded(force: Bool = false, now: Date = .now) async {
+        guard settings.preferences.checkForAppUpdates, !isCheckingAppRelease else { return }
+        if !force, !ReleaseCheckPolicy.shouldCheck(
+            enabled: true, lastSuccess: settings.latestAppRelease?.checkedAt, lastFailure: lastAppReleaseFailure, now: now
+        ) { return }
+
+        isCheckingAppRelease = true
+        defer { isCheckingAppRelease = false }
+        do {
+            settings.recordLatestAppRelease(try await appReleaseFetcher.latestRelease())
+            lastAppReleaseFailure = nil
+        } catch {
+            lastAppReleaseFailure = now
+        }
+    }
+
+    /// Called when the setting is switched on, so the badge doesn't wait for the next scheduled check.
+    func checkForAppUpdateNow() {
+        Task { await checkForAppUpdateIfNeeded(force: true) }
     }
 
     // MARK: - Problem notifications
@@ -556,6 +593,7 @@ final class ServerStore {
             appendHistory(from: next.overview)
             rememberHostname(next.overview?.hostname)
             Task { await checkForOSUpdateIfNeeded() }
+            Task { await checkForAppUpdateIfNeeded() }
         } else {
             consecutiveFailures += 1
             // A request on the current route failed: decide the route again next time.
