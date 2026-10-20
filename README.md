@@ -41,7 +41,7 @@ Download the latest `.dmg` from the [Releases page](../../releases), open it and
    - Both accept an IP or hostname, with an optional `https://` and an optional `:port`. With no scheme, `http://` is assumed.
    - **Mode:** *Auto* (recommended), *Always LAN* or *Always remote*.
 3. Paste your **API key** and press **Save key**. It is stored in the macOS Keychain, never in a file or in settings.
-4. Press **Test connection**. For each address it reports whether it's reachable, whether the key is accepted, the server's hostname, encryption and response time.
+4. Press **Test connection**. For each address it reports whether it's reachable, whether the key is accepted, the server's hostname, encryption and response time. Because you're asking it to test those addresses, it sends your API key to each one you've entered, without the safety check Auto mode uses (see below). So press it on your own network, and be aware that on a plain `http://` address the key goes to whatever answers there.
 
 ### How Auto mode chooses
 
