@@ -17,12 +17,36 @@ nonisolated enum ProbeResult: Sendable {
     case failed(UnraidError)
 }
 
-/// Sends `{ info { os { hostname } } }` to an address. A protocol so route selection can be tested with a mock.
+/// What the keyless login page said about who is at an address.
+nonisolated enum LoginNameResult: Sendable {
+    case name(String)
+    /// Something answered, but not with a page that names a server. Treated as "not verified".
+    case unreadable
+    /// Nothing answered in time.
+    case failed(UnraidError)
+}
+
+/// Sends `{ info { os { hostname } } }` to an address, and can ask for the server's name WITHOUT the API key.
+/// A protocol so route selection can be tested with a mock.
 nonisolated protocol RouteProbing: Sendable {
     func probe(base: URL, apiKey: String, timeout: TimeInterval) async -> ProbeResult
+    func loginName(base: URL, timeout: TimeInterval) async -> LoginNameResult
 }
 
 extension UnraidClient: RouteProbing {
+    nonisolated func loginName(base: URL, timeout: TimeInterval) async -> LoginNameResult {
+        do {
+            let page = try await loginPage(base: base, timeout: timeout)
+            return LoginPage.serverName(in: page).map(LoginNameResult.name) ?? .unreadable
+        } catch let error as UnraidError {
+            // Only "nothing answered" is a failure. An odd answer (a redirect, an error page) is unverified.
+            if case .unreachable = error { return .failed(error) }
+            return .unreadable
+        } catch {
+            return .failed(.unreachable(error.localizedDescription))
+        }
+    }
+
     nonisolated func probe(base: URL, apiKey: String, timeout: TimeInterval) async -> ProbeResult {
         do {
             return .server(hostname: try await fetchHostname(base: base, apiKey: apiKey, timeout: timeout))
@@ -46,10 +70,20 @@ nonisolated struct RouteResolution: Sendable {
 ///
 /// Auto mode: probe the LAN address with a 1 s timeout and confirm the answering server is ours
 /// (hostname matches the one saved at first connection, and for HTTPS the pinned certificate must match).
-/// If that passes, use the LAN; otherwise use the remote address. This keeps the API key from going to
-/// some other device that happens to share the same IP on another network.
+/// If that passes, use the LAN; otherwise use the remote address.
+///
+/// The keyed probe carries the API key, so on its own the hostname check can't stop it reaching an impostor.
+/// - HTTPS: the pinned certificate is checked in the TLS handshake, before anything is sent.
+/// - Plain HTTP with a saved hostname: the server's name is first read from the login page, which needs no key,
+///   and the key is only sent if that name matches. A name that can't be read counts as a mismatch (fail safe).
+///   A determined impostor can fake a page title, so only HTTPS fully rules that out; this stops the realistic case of
+///   another network reusing the same IP.
+/// - Plain HTTP on the very first connection has no saved hostname to compare with, so nothing can be checked yet.
 nonisolated enum RouteResolver {
     static let lanTimeout: TimeInterval = 1.0
+
+    /// Added to the "different server" note, because the usual cause is renaming the server in Unraid.
+    static let renameHint = "If you renamed your server, use Reset next to Server identity in Settings → Connection (at home, on your own network)."
 
     static func resolve(_ config: ServerConfig, apiKey: String, prober: RouteProbing) async -> RouteResolution {
         let lan = AddressParser.parse(config.lanAddress)?.baseURL
@@ -70,18 +104,14 @@ nonisolated enum RouteResolver {
         let lanRoute = ActiveRoute(kind: .lan, base: lan)
         let remoteRoute = remote.map { ActiveRoute(kind: .remote, base: $0) }
 
-        let result = await prober.probe(base: lan, apiKey: apiKey, timeout: lanTimeout)
-        switch result {
-        case .server(let hostname) where identityMatches(expected: config.expectedHostname, found: hostname):
-            return RouteResolution(route: lanRoute)
-
-        case .server(let hostname):
-            // Something answered on the LAN address, but it isn't our server. Never send it the key.
-            let found = hostname.map { "\"\($0)\"" } ?? "an unnamed server"
-            let note = "The LAN address answered as \(found), not \"\(config.expectedHostname ?? "your server")\"."
+        func notOurs(_ found: String?) -> RouteResolution {
+            let name = found.map { "\"\($0)\"" } ?? "an unnamed server"
+            var note = "The LAN address answered as \(name), not \"\(config.expectedHostname ?? "your server")\"."
+            if config.expectedHostname != nil { note += " " + renameHint }
             return RouteResolution(route: remoteRoute, note: remoteRoute == nil ? note + " Not using it." : note)
+        }
 
-        case .failed(let error):
+        func unavailable(_ error: UnraidError) -> RouteResolution {
             let issue = error.isCertificateProblem ? error : nil
             if let remoteRoute {
                 return RouteResolution(route: remoteRoute, note: "LAN address not available, using the remote address.", certificateIssue: issue)
@@ -93,6 +123,31 @@ nonisolated enum RouteResolver {
                 note: error.isCertificateProblem ? error.localizedDescription : nil,
                 certificateIssue: issue
             )
+        }
+
+        // Plain HTTP can't be verified by a certificate, so check the server's name first, without the key.
+        if lan.scheme == "http", let expected = config.expectedHostname, !expected.isEmpty {
+            switch await prober.loginName(base: lan, timeout: lanTimeout) {
+            case .name(let found) where identityMatches(expected: expected, found: found):
+                break
+            case .name(let found):
+                return notOurs(found)
+            case .unreadable:
+                let note = "MenuRaid couldn't confirm the LAN address is your server, so it didn't send your API key there."
+                return RouteResolution(route: remoteRoute, note: remoteRoute == nil ? note + " Not using it." : note)
+            case .failed(let error):
+                return unavailable(error)
+            }
+        }
+
+        switch await prober.probe(base: lan, apiKey: apiKey, timeout: lanTimeout) {
+        case .server(let hostname) where identityMatches(expected: config.expectedHostname, found: hostname):
+            return RouteResolution(route: lanRoute)
+        case .server(let hostname):
+            // Something answered on the LAN address, but it isn't our server. Send it nothing further.
+            return notOurs(hostname)
+        case .failed(let error):
+            return unavailable(error)
         }
     }
 

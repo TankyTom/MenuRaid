@@ -8,12 +8,34 @@ final class MockProber: RouteProbing, @unchecked Sendable {
 
     private let lock = NSLock()
     private var answers: [String: ProbeResult] = [:]
+    private var loginAnswers: [String: LoginNameResult] = [:]
     private var recorded: [Call] = []
+    private var recordedLogin: [Call] = []
 
-    init(_ answers: [String: ProbeResult] = [:]) { self.answers = answers }
+    init(_ answers: [String: ProbeResult] = [:], loginNames: [String: LoginNameResult] = [:]) {
+        self.answers = answers
+        self.loginAnswers = loginNames
+    }
 
+    /// Keyed probes, i.e. requests that carry the API key.
     var calls: [Call] { lock.withLock { recorded } }
+    /// Keyless login-page checks.
+    var loginCalls: [Call] { lock.withLock { recordedLogin } }
     func set(_ host: String, _ result: ProbeResult) { lock.withLock { answers[host] = result } }
+
+    /// Unless a test says otherwise, the login page names the same server the keyed probe would report.
+    func loginName(base: URL, timeout: TimeInterval) async -> LoginNameResult {
+        let host = base.host ?? ""
+        return lock.withLock {
+            recordedLogin.append(Call(host: host, timeout: timeout))
+            if let explicit = loginAnswers[host] { return explicit }
+            switch answers[host] {
+            case .server(let name)?: return name.map(LoginNameResult.name) ?? .unreadable
+            case .failed(let error)?: return .failed(error)
+            case nil: return .failed(.unreachable("no answer"))
+            }
+        }
+    }
 
     func probe(base: URL, apiKey: String, timeout: TimeInterval) async -> ProbeResult {
         let host = base.host ?? ""

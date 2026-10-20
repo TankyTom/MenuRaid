@@ -45,9 +45,15 @@ Download the latest `.dmg` from the [Releases page](../../releases), open it and
 
 ### How Auto mode chooses
 
-It asks your LAN address "who are you?" with a 1 second timeout, and uses it only if the answering server has the same hostname that was saved at your first successful connection (and, for HTTPS, the same pinned certificate). Otherwise it uses the remote address. This keeps your API key from being sent to some other device that happens to have the same IP on a different network. The decision is remembered and checked again only when your network changes, your Mac wakes from sleep, or a request fails. It doesn't use the Wi-Fi name, which needs Location permission and doesn't work on Ethernet.
+It asks your LAN address "who are you?" with a 1 second timeout, and uses it only if the answering server has the same hostname that was saved at your first successful connection (and, for HTTPS, the same pinned certificate). Otherwise it uses the remote address. The API key is only sent once the address is confirmed:
 
-If you rename your server, use **Reset** next to "Server identity" in Settings → Connection.
+- **`https://` LAN address:** the pinned certificate is checked before anything is sent.
+- **Plain `http://` LAN address:** MenuRaid first reads your server's name from its login page, which needs no key (Unraid titles it `Hostname/Login`), and only sends the key if that name matches the one saved at your first connection. If the name is different, or can't be read, the key isn't sent and MenuRaid uses the remote address instead (or shows an error if there isn't one). This stops another network that happens to reuse your server's IP from receiving your key. A page title can be faked on purpose, so only `https://` fully protects you against someone deliberately impersonating your server.
+- **Your very first connection** has no saved name to compare with, so it can't be checked yet. Make that first connection at home.
+
+The decision is remembered and checked again only when your network changes, your Mac wakes from sleep, or a request fails. It doesn't use the Wi-Fi name, which needs Location permission and doesn't work on Ethernet.
+
+If you rename your server, MenuRaid stops using the LAN address (it no longer matches the saved name) and says so. Use **Reset** next to "Server identity" in Settings → Connection, and do it at home on your own network: after a reset the next connection is a first connection again, so it accepts whatever answers at that address and saves its name. This is deliberately manual. If MenuRaid trusted a changed name on its own, the check would protect nothing.
 
 ## Where clicks go
 
@@ -71,6 +77,7 @@ Containers on a custom network with their own IP (for example `br0`) can't be re
   Neither request carries anything about you or your server: no version, hostname or API key. There is no analytics and no other network traffic.
 - **HTTPS with a self-signed certificate:** the first time, MenuRaid shows the certificate's SHA-256 fingerprint and asks you to confirm it (trust on first use). After that it accepts only that exact certificate. If it changes, the connection is blocked with a clear warning and a deliberate re-trust step. There is no "trust any certificate" option.
 - **macOS App Transport Security:** home servers usually speak plain `http://`, and macOS blocks that by default for names like `tower.tailnet-xxxx.ts.net`. MenuRaid therefore sets `NSAllowsArbitraryLoads` in its Info.plist. This only widens what the app is *allowed* to connect to; the app still contacts nothing but the addresses you enter. (`NSAllowsLocalNetworking` is deliberately not set: macOS ignores `NSAllowsArbitraryLoads` whenever it is present.) If you build your own copy, keep that setting or `http://` addresses other than IPs and `.local` names won't connect.
+- **Redirects:** MenuRaid follows a redirect only to the same host, and never from `https://` down to `http://`. A redirect to any other address is refused, so the API key can't be forwarded elsewhere. If your server forces HTTPS through another hostname, enter that `https://` address.
 - **Plain `http://` on your LAN** sends the API key unencrypted across your network. MenuRaid shows a one-time, dismissible notice and suggests enabling HTTPS in Unraid (Settings → Management Access). It doesn't warn about the remote address, which is normally a VPN such as Tailscale.
 - Notifications are local to your Mac (`UserNotifications`); nothing is sent anywhere to produce them.
 - **Warnings about unencrypted keys:** a plain `http://` LAN address and a plain `http://` remote address that looks like the public internet each get a one-time, dismissible notice. VPN and private addresses (Tailscale `100.x` and `.ts.net`, `192.168.x.x`, `.local`, and so on) don't count as the public internet.

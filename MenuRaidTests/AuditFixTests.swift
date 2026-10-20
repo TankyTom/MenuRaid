@@ -22,9 +22,10 @@ struct LANRecheckTests {
         #expect(await manager.resolve(apiKey: "k", now: t0)?.kind == .remote)
 
         prober.set("192.168.1.10", .server(hostname: "Tower"))   // the server finishes booting
-        // Within the interval nothing is re-probed...
+        // Within the interval nothing is re-probed. (Each LAN attempt starts with the keyless login-page check,
+        // so that is what counts attempts while the LAN is down.)
         #expect(await manager.resolve(apiKey: "k", now: t0.addingTimeInterval(60))?.kind == .remote)
-        #expect(prober.calls.count == 1)
+        #expect(prober.loginCalls.count == 1)
         // ...after it, the LAN is tried again and wins.
         #expect(await manager.resolve(apiKey: "k", now: t0.addingTimeInterval(RouteManager.lanRecheckInterval + 1))?.kind == .lan)
     }
@@ -35,10 +36,11 @@ struct LANRecheckTests {
         _ = await manager.resolve(apiKey: "k", now: t0)
         let later = t0.addingTimeInterval(RouteManager.lanRecheckInterval + 1)
         #expect(await manager.resolve(apiKey: "k", now: later)?.kind == .remote)
-        #expect(prober.calls.count == 2)
+        #expect(prober.loginCalls.count == 2)
+        #expect(prober.calls.isEmpty)   // and the key was never sent to an address that didn't answer
         // And the next re-check is a full interval after that one, not on every refresh.
         _ = await manager.resolve(apiKey: "k", now: later.addingTimeInterval(30))
-        #expect(prober.calls.count == 2)
+        #expect(prober.loginCalls.count == 2)
     }
 
     @Test func aWorkingLANIsNeverReprobedOnASchedule() async {

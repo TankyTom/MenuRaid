@@ -32,7 +32,21 @@ actor UnraidClient {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
         request.httpBody = try JSONSerialization.data(withJSONObject: ["query": query])
+        return try await send(request, base: base)
+    }
 
+    /// Fetches the webGUI login page WITHOUT the API key. Its title names the server, so a plain-HTTP address can be
+    /// checked before the key is ever sent to it.
+    func loginPage(base: URL, timeout: TimeInterval) async throws -> String {
+        var request = URLRequest(url: base.appending(path: "login"), timeoutInterval: timeout)
+        request.httpMethod = "GET"
+        request.setValue("text/html", forHTTPHeaderField: "Accept")
+        let data = try await send(request, base: base)
+        // The title is near the top; don't hold on to a whole page.
+        return String(decoding: data.prefix(LoginPage.maxBytes), as: UTF8.self)
+    }
+
+    private func send(_ request: URLRequest, base: URL) async throws -> Data {
         let data: Data
         let response: URLResponse
         do {

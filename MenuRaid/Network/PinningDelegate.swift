@@ -17,12 +17,27 @@ nonisolated final class CertFailureBox: @unchecked Sendable {
     }
 }
 
+/// Which redirects MenuRaid follows. Only to the same host, and never from https down to http.
+/// A different host is refused outright so the `x-api-key` header can't be forwarded to it.
+nonisolated enum RedirectPolicy {
+    static func allows(from original: URL?, to target: URL?) -> Bool {
+        guard let original, let target,
+              let fromHost = original.host?.lowercased(), let toHost = target.host?.lowercased(),
+              fromHost == toHost,
+              let fromScheme = original.scheme?.lowercased(), let toScheme = target.scheme?.lowercased(),
+              toScheme == "http" || toScheme == "https"
+        else { return false }
+        // http → https on the same host (a port change is fine) is an upgrade; https → http is a downgrade.
+        return !(fromScheme == "https" && toScheme == "http")
+    }
+}
+
 /// TOFU certificate pinning.
 /// - A pinned host must present exactly the pinned certificate.
 /// - An unpinned host is accepted only if the system already trusts its certificate.
 /// - Otherwise the connection is refused and the fingerprint is reported for confirmation.
 /// There is deliberately no "trust anything" path.
-nonisolated final class PinningDelegate: NSObject, URLSessionDelegate, @unchecked Sendable {
+nonisolated final class PinningDelegate: NSObject, URLSessionDelegate, URLSessionTaskDelegate, @unchecked Sendable {
     private let pins: CertPinStore
     private let failures: CertFailureBox
 
@@ -63,6 +78,19 @@ nonisolated final class PinningDelegate: NSObject, URLSessionDelegate, @unchecke
             failures.set(.untrustedCertificate(fingerprint: fingerprint), host: host)
             completionHandler(.cancelAuthenticationChallenge, nil)
         }
+    }
+
+    /// Every request carries the API key, so a redirect must not carry it somewhere else.
+    /// A refused redirect hands back the 3xx response itself, which the client reports as an error.
+    func urlSession(
+        _ session: URLSession,
+        task: URLSessionTask,
+        willPerformHTTPRedirection response: HTTPURLResponse,
+        newRequest request: URLRequest,
+        completionHandler: @escaping @Sendable (URLRequest?) -> Void
+    ) {
+        let allowed = RedirectPolicy.allows(from: task.originalRequest?.url, to: request.url)
+        completionHandler(allowed ? request : nil)
     }
 
     /// SHA-256 of the leaf certificate's DER bytes, as `AA:BB:...`.

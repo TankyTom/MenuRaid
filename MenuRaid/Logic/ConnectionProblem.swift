@@ -22,6 +22,8 @@ nonisolated enum ConnectionProblem: Equatable, Sendable {
         case .insecureConnectionBlocked?: .insecureBlocked
         case .untrustedCertificate?: .certificateUntrusted
         case .certificateMismatch?: .certificateChanged
+        case .http(let status)? where (300..<400).contains(status):
+            .unexpectedResponse("The server tried to send MenuRaid to a different address. MenuRaid doesn't follow that, so your API key can't be sent anywhere else.")
         case .http(let status)?: .unexpectedResponse("The server answered with HTTP \(status).")
         case .graphQL(let messages)?: .unexpectedResponse(messages.joined(separator: "; "))
         case .decoding?: .unexpectedResponse("The server answered, but not like an Unraid API.")
@@ -65,9 +67,9 @@ nonisolated enum ConnectionProblem: Equatable, Sendable {
         case .certificateChanged:
             "The server's certificate is different from the one you trusted, so the connection was blocked. If you changed it yourself, re-trust it in Settings → Connection."
         case .wrongServer(let note):
-            note ?? "A different device answered at your LAN address, so MenuRaid didn't send it your API key. Add a remote address, or check the LAN address."
+            note ?? "A different device answered at your LAN address, so MenuRaid stopped talking to it. Add a remote address, or check the LAN address."
         case .unexpectedResponse(let detail):
-            "\(detail) Check the address and port in Settings."
+            "\(detail) Check the address and port in Settings. If your server forces HTTPS, enter the https:// address you open in your browser."
         }
     }
 
