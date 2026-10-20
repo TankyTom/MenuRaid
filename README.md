@@ -94,3 +94,9 @@ The sample data used by previews and tests lives in a debug-only Swift file (`Fi
 ## Design
 
 `UnraidClient` (an actor) does the GraphQL requests and certificate pinning. `RouteManager` and `RouteResolver` choose between the LAN and remote address. `ServerStore` runs the refresh loop, keeps the snapshot and works out health with the pure `HealthEvaluator`. `LinkBuilder` builds every link the panel opens. All code was written from scratch for this project.
+
+## Licence
+
+MIT, copyright (c) 2026 Kyle Reid. See [LICENSE](LICENSE).
+
+MenuRaid is an independent project and is not affiliated with Lime Technology, Inc. "Unraid" is their trademark.
