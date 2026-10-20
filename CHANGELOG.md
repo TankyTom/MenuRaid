@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.1
+
+- New app icon, drawn from scratch: a stack of server slabs with status LEDs. The first icon used one of Apple's SF Symbols, which Apple's licence doesn't allow in app icons.
+- Nothing else in the app changed. The documentation now says that **Test connection** sends your API key to each address you've entered, and the repository has a security policy (`SECURITY.md`).
+
 ## 1.0.0
 
 First release.
