@@ -143,6 +143,15 @@ final class ServerStore {
         settings.preferences.httpWarningDismissed = true
     }
 
+    /// The one-time notice for a plain `http://` remote address that looks like the public internet.
+    var showRemoteHTTPWarning: Bool {
+        SecurityNotice.shouldShowRemoteHTTPWarning(config: settings.primary, dismissed: settings.preferences.remoteHTTPWarningDismissed)
+    }
+
+    func dismissRemoteHTTPWarning() {
+        settings.preferences.remoteHTTPWarningDismissed = true
+    }
+
     /// Short text shown beside the status symbol, per the user's choice. nil means icon only.
     var menuBarText: String? {
         switch settings.preferences.menuBarValue {

@@ -54,6 +54,7 @@ struct PanelCards: View {
     var body: some View {
         VStack(spacing: 12) {
             if store.showHTTPWarning { HTTPWarningCard() }
+            if store.showRemoteHTTPWarning { RemoteHTTPWarningCard() }
 
             if store.isDisconnected {
                 // Nothing is getting through: say so once, clearly, instead of five identical error cards.
@@ -105,6 +106,25 @@ struct PanelCards: View {
         if showLastKnown {
             VStack(spacing: 12) { dataCards }
                 .opacity(0.55)
+        }
+    }
+}
+
+/// One-time notice: a plain http:// remote address that looks like the public internet. Dismissible.
+struct RemoteHTTPWarningCard: View {
+    @Environment(ServerStore.self) private var store
+
+    var body: some View {
+        Card("Security", tint: Palette.warn) {
+            Label {
+                Text("Your remote address uses plain http:// and looks like it's on the public internet, so your API key may be sent unencrypted. Use an https:// address, or connect over a VPN such as Tailscale.")
+                    .font(.callout)
+                    .fixedSize(horizontal: false, vertical: true)
+            } icon: {
+                Image(systemName: "lock.open.trianglebadge.exclamationmark.fill").foregroundStyle(Palette.warn)
+            }
+            Button("Dismiss") { store.dismissRemoteHTTPWarning() }
+                .help("Hide this notice. It won't appear again.")
         }
     }
 }

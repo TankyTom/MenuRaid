@@ -54,6 +54,8 @@ nonisolated struct AppPreferences: Codable, Equatable, Sendable {
     var thresholds = Thresholds()
     /// The one-time "your key is sent unencrypted over http://" notice has been dismissed.
     var httpWarningDismissed = false
+    /// The same for a plain-HTTP remote address that looks like the public internet.
+    var remoteHTTPWarningDismissed = false
     /// List running containers above stopped ones (within the chosen order).
     var dockerRunningFirst = true
     /// Ask Unraid's public release server which version is the latest stable. Off by default: it is the one
@@ -70,6 +72,7 @@ nonisolated struct AppPreferences: Codable, Equatable, Sendable {
         appearance = c.lenient(AppearanceMode.self, .appearance) ?? .system
         thresholds = c.lenient(Thresholds.self, .thresholds) ?? Thresholds()
         httpWarningDismissed = c.lenient(Bool.self, .httpWarningDismissed) ?? false
+        remoteHTTPWarningDismissed = c.lenient(Bool.self, .remoteHTTPWarningDismissed) ?? false
         dockerRunningFirst = c.lenient(Bool.self, .dockerRunningFirst) ?? true
         checkForOSUpdates = c.lenient(Bool.self, .checkForOSUpdates) ?? false
     }

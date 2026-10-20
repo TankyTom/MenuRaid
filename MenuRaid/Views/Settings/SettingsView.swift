@@ -50,6 +50,12 @@ struct ConnectionSettingsView: View {
                 TextField("Remote address", text: $settings.primary.remoteAddress, prompt: Text("100.64.0.1 or tower.tailnet-xxxx.ts.net"))
                     .autocorrectionDisabled()
                 addressStatus(for: settings.primary.remoteAddress)
+                if SecurityNotice.remoteUsesUnprotectedHTTP(settings.primary) {
+                    Label("Plain HTTP over what looks like the public internet: your API key may be sent unencrypted. Use https:// or a VPN such as Tailscale.", systemImage: "lock.open.fill")
+                        .font(.caption)
+                        .foregroundStyle(Palette.warn)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
 
                 Picker("Mode", selection: $settings.primary.mode) {
                     ForEach(RouteMode.allCases) { mode in
