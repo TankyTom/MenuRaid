@@ -1,5 +1,16 @@
 import Foundation
 
+/// How often the snapshot is written. The panel refreshes every 5 s while open, but a snapshot at most 30 s old is
+/// plenty for "what it looked like last time", and rewriting a file that often is needless disk churn.
+nonisolated enum CacheWritePolicy {
+    static let minimumInterval: TimeInterval = 30
+
+    static func shouldWrite(lastWrite: Date?, now: Date = .now) -> Bool {
+        guard let lastWrite else { return true }
+        return now.timeIntervalSince(lastWrite) >= minimumInterval
+    }
+}
+
 /// Last good snapshot, kept on disk so the panel has something to show at launch.
 /// Lives in Application Support/MenuRaid/ (inside the app sandbox). Never contains the API key.
 nonisolated struct SnapshotCache: Sendable {

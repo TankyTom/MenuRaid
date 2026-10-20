@@ -16,12 +16,12 @@ struct SystemCard: View {
             }
             if let overview {
                 metric(
-                    "CPU", value: overview.cpuPercent, history: store.cpuHistory,
+                    "CPU", value: overview.cpuPercent, history: store.cpuHistory.samples,
                     detail: cpuDetail(overview), color: Color.accentColor, minimumCeiling: 25
                 )
                 Divider().opacity(0.5)
                 metric(
-                    "RAM", value: overview.memoryPercent, history: store.ramHistory,
+                    "RAM", value: overview.memoryPercent, history: store.ramHistory.samples,
                     detail: overview.memoryTotalBytes.map { "\(Format.memory(bytes: $0)) installed" },
                     color: .purple
                 )
@@ -36,7 +36,7 @@ struct SystemCard: View {
             .compactMap { $0 }.joined(separator: " · ")
     }
 
-    private func metric(_ name: String, value: Double?, history: [Double], detail: String?, color: Color, minimumCeiling: Double = 100) -> some View {
+    private func metric(_ name: String, value: Double?, history: [MetricSample], detail: String?, color: Color, minimumCeiling: Double = 100) -> some View {
         HStack(alignment: .center, spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(name).font(.subheadline).foregroundStyle(.secondary)
@@ -47,7 +47,7 @@ struct SystemCard: View {
                     Text(detail).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                 }
             }
-            Sparkline(values: history, color: color, minimumCeiling: minimumCeiling)
+            Sparkline(samples: history, color: color, minimumCeiling: minimumCeiling)
                 .frame(height: 52)
         }
         .accessibilityElement(children: .combine)

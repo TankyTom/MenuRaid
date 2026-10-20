@@ -40,8 +40,8 @@ final class ServerStore {
     private(set) var setupMessage: String?
     /// A certificate problem (untrusted or changed) from the last refresh, if any.
     private(set) var certificateIssue: UnraidError?
-    private(set) var cpuHistory: [Double] = []
-    private(set) var ramHistory: [Double] = []
+    private(set) var cpuHistory = MetricHistory()
+    private(set) var ramHistory = MetricHistory()
     private(set) var isPanelOpen = false
     /// The server rejected the API key on the last refresh.
     private(set) var authFailed = false
@@ -53,7 +53,6 @@ final class ServerStore {
     /// Chooses between the LAN and remote address and remembers the choice.
     let routes: RouteManager
 
-    static let historyLimit = 60
     static let panelOpenInterval: TimeInterval = 5
     /// Per-request timeout for section queries. Unraid's Docker and array queries can take several seconds.
     static let requestTimeout: TimeInterval = 20
@@ -73,6 +72,7 @@ final class ServerStore {
     /// Identifies the newest refresh, so an older cancelled one finishing late can't switch the spinner off.
     private var refreshGeneration = 0
     private var settingsDebounce: Task<Void, Never>?
+    private var lastCacheWrite: Date?
     private var lastReleaseFailure: Date?
     private var isCheckingRelease = false
     private var didPromptForSetup = false
@@ -320,6 +320,13 @@ final class ServerStore {
         }
     }
 
+    /// Writes the latest live snapshot now (before sleep), so the throttle never costs more than the sleep itself.
+    private func flushCache() {
+        guard let snapshot, !isShowingCache else { return }
+        cache.save(snapshot)
+        lastCacheWrite = .now
+    }
+
     func stop() {
         loopTask?.cancel()
         loopTask = nil
@@ -352,8 +359,8 @@ final class ServerStore {
         authFailed = false
         isUnreachable = false
         isShowingCache = false
-        cpuHistory = []
-        ramHistory = []
+        cpuHistory.removeAll()
+        ramHistory.removeAll()
         consecutiveFailures = 0
         cache.delete()
         routes.reset()
@@ -383,6 +390,7 @@ final class ServerStore {
         let center = NSWorkspace.shared.notificationCenter
         sleepObserver = Task { [weak self] in
             for await _ in center.notifications(named: NSWorkspace.willSleepNotification) {
+                self?.flushCache()
                 self?.stop()
             }
         }
@@ -497,7 +505,10 @@ final class ServerStore {
             next.fetchedAt = .now
             lastSuccess = next.fetchedAt
             snapshot = next
-            cache.save(next)
+            if CacheWritePolicy.shouldWrite(lastWrite: lastCacheWrite) {
+                cache.save(next)
+                lastCacheWrite = .now
+            }
             appendHistory(from: next.overview)
             rememberHostname(next.overview?.hostname)
             Task { await checkForOSUpdateIfNeeded() }
@@ -531,12 +542,13 @@ final class ServerStore {
         sectionErrors = errors
         isShowingCache = fromCache
         isUnreachable = unreachable
-        var cpu: [Double] = []
-        var ram: [Double] = []
-        for i in 0..<Self.historyLimit {
+        var cpu = MetricHistory()
+        var ram = MetricHistory()
+        for i in 0..<40 {
             let x = Double(i)
-            cpu.append(8 + 6 * sin(x / 5) + Double((i * 7) % 9))
-            ram.append(78 + 4 * sin(x / 9) + Double((i * 3) % 4))
+            let date = Date.now.addingTimeInterval(-Double(39 - i) * 15)   // 40 samples over the last 10 minutes
+            cpu.append(8 + 6 * sin(x / 5) + Double((i * 7) % 9), at: date)
+            ram.append(78 + 4 * sin(x / 9) + Double((i * 3) % 4), at: date)
         }
         cpuHistory = cpu
         ramHistory = ram
@@ -548,15 +560,9 @@ final class ServerStore {
         ServerSnapshot(serverID: settings.primary.id, fetchedAt: .now)
     }
 
-    private func appendHistory(from overview: ServerOverview?) {
-        if let cpu = overview?.cpuPercent {
-            cpuHistory.append(cpu)
-            cpuHistory = Array(cpuHistory.suffix(Self.historyLimit))
-        }
-        if let ram = overview?.memoryPercent {
-            ramHistory.append(ram)
-            ramHistory = Array(ramHistory.suffix(Self.historyLimit))
-        }
+    private func appendHistory(from overview: ServerOverview?, at date: Date = .now) {
+        if let cpu = overview?.cpuPercent { cpuHistory.append(cpu, at: date) }
+        if let ram = overview?.memoryPercent { ramHistory.append(ram, at: date) }
     }
 
     /// Remember the server's hostname on first success; route probing uses it to confirm identity.
