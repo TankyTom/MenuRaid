@@ -127,6 +127,7 @@ struct StoreNoticeTests {
     }
 }
 
+@MainActor
 struct StatusBadgeTests {
     @Test func onlyIssuesGetABadge() {
         #expect(StatusBadge(level: .green) == nil)
