@@ -144,7 +144,10 @@ struct PanelHeader: View {
 
             VStack(alignment: .leading, spacing: 1) {
                 Text(overview?.hostname ?? "MenuRaid").font(.headline)
-                if let subtitle { Text(subtitle).font(.caption).foregroundStyle(.secondary) }
+                HStack(spacing: 6) {
+                    if let subtitle { Text(subtitle).font(.caption).foregroundStyle(.secondary) }
+                    if let update = store.osUpdate { OSUpdateBadge(update: update) }
+                }
             }
 
             Spacer()
@@ -204,6 +207,30 @@ struct PanelHeader: View {
         guard let overview = store.snapshot?.overview else { return nil }
         let version = overview.unraidVersion.map { "Unraid \($0)" } ?? overview.release
         return version
+    }
+}
+
+/// A small "↑ 7.3.3" next to the Unraid version when a newer stable release exists. Click for the update page or notes.
+struct OSUpdateBadge: View {
+    @Environment(ServerStore.self) private var store
+    let update: OSUpdate
+
+    var body: some View {
+        Menu {
+            Button("Open the Update OS page in Unraid") { store.open(.updateOS) }
+            if let notes = update.latest.notesURL {
+                Button("Read the release notes for \(update.latest.version)") { NSWorkspace.shared.open(notes) }
+            }
+        } label: {
+            Label(update.latest.version, systemImage: "arrow.up.circle.fill")
+                .font(.caption.weight(.medium))
+                .foregroundStyle(Palette.accentIcon)
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .help("Unraid \(update.latest.version) is available (this server runs \(update.current)).")
+        .accessibilityLabel("Unraid \(update.latest.version) is available")
     }
 }
 

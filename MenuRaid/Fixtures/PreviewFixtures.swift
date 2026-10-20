@@ -1,27 +1,21 @@
 #if DEBUG
 import Foundation
 
-/// Snapshots for SwiftUI previews and tests, built from real responses captured from an Unraid 7.2.3 server
-/// (`Fixtures/live/*.json`). Scenario variants are derived from that data.
+/// Snapshots for SwiftUI previews and tests, built from scrubbed responses captured from an Unraid 7.2.3 server
+/// (see `FixtureJSON`). Scenario variants are derived from that data.
 enum PreviewFixtures {
-    private final class BundleToken {}
-
     private struct Envelope<T: Decodable>: Decodable { let data: T }
 
     private static func load<T: Decodable>(_ type: T.Type, _ name: String) -> T? {
-        for bundle in [Bundle(for: BundleToken.self), Bundle.main] {
-            if let url = bundle.url(forResource: name, withExtension: "json"),
-               let data = try? Data(contentsOf: url),
-               let value = try? JSONDecoder().decode(Envelope<T>.self, from: data) {
-                return value.data
-            }
-        }
-        return nil
+        guard let json = FixtureJSON.named(name),
+              let value = try? JSONDecoder().decode(Envelope<T>.self, from: Data(json.utf8))
+        else { return nil }
+        return value.data
     }
 
     static let serverID = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
 
-    /// Your real server: array started, disk1 disabled with errors, unread alerts, 34 containers, 2 VMs.
+    /// A typical server: array started, disk1 disabled with errors, unread alerts, 34 containers, 2 VMs.
     static var live: ServerSnapshot {
         var array: ArrayInfo?
         if let raw = load(ArrayResponse.self, "array") {
@@ -108,8 +102,13 @@ enum PreviewFixtures {
     /// Preview settings with a LAN address (so links resolve) and one override.
     @MainActor static let settings: SettingsStore = {
         let store = SettingsStore(defaults: UserDefaults(suiteName: "menuraid.preview") ?? .standard)
-        store.primary.lanAddress = "192.168.1.10"
-        store.primary.containerOverrides = ["binhex-delugevpn": "http://192.168.1.10:8112"]
+        store.primary.lanAddress = "192.168.1.50"
+        store.primary.containerOverrides = ["binhex-delugevpn": "http://192.168.1.50:8112"]
+        store.preferences.checkForOSUpdates = true
+        store.recordLatestRelease(LatestRelease(
+            version: "7.3.3", name: "Unraid 7.3.3", date: "2026-10-06",
+            notesURL: URL(string: "https://docs.unraid.net/unraid-os/release-notes/7.3.3/"), checkedAt: .now
+        ))
         return store
     }()
 

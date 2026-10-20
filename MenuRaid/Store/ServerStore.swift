@@ -62,6 +62,7 @@ final class ServerStore {
     private let client: UnraidClient
     private let keychain: KeychainStore
     private let cache: SnapshotCache
+    private let releaseFetcher: ReleaseFetching
 
     private var loopTask: Task<Void, Never>?
     private var sleepObserver: Task<Void, Never>?
@@ -69,15 +70,22 @@ final class ServerStore {
     private var pathObserver: NetworkPathObserver?
     private var pathTask: Task<Void, Never>?
     private(set) var consecutiveFailures = 0
+    /// Identifies the newest refresh, so an older cancelled one finishing late can't switch the spinner off.
+    private var refreshGeneration = 0
+    private var settingsDebounce: Task<Void, Never>?
+    private var lastReleaseFailure: Date?
+    private var isCheckingRelease = false
     private var didPromptForSetup = false
 
     init(
         settings: SettingsStore,
         client: UnraidClient = UnraidClient(),
         keychain: KeychainStore = KeychainStore(),
+        releaseFetcher: ReleaseFetching = ReleaseChecker(),
         autostart: Bool = true
     ) {
         self.settings = settings
+        self.releaseFetcher = releaseFetcher
         self.client = client
         self.keychain = keychain
         self.cache = SnapshotCache(serverID: settings.primary.id)
@@ -167,15 +175,26 @@ final class ServerStore {
     var routeNote: String? { routes.note }
 
     /// Tests the LAN and remote addresses separately for the Settings "Test connection" button.
-    func testConnection() async -> [ConnectionReport] {
+    /// `typedKey` is whatever is in the API key field right now: if there is one it's used, so you can test a key
+    /// before saving it; otherwise the saved key is used.
+    func testConnection(typedKey: String = "") async -> [ConnectionReport] {
         let config = settings.primary
-        guard let key = (try? keychain.get(account: config.id.uuidString)) ?? nil, !key.isEmpty else {
+        let saved = (try? keychain.get(account: config.id.uuidString)) ?? nil
+        guard let key = Self.keyForTest(typed: typedKey, saved: saved) else {
             return [ConnectionReport(
                 kind: .lan, address: "", url: nil, reachable: false, apiKey: .no, hostname: nil,
-                identity: .unknown, certificate: nil, latency: nil, message: "Save your API key first."
+                identity: .unknown, certificate: nil, latency: nil, message: "Enter your API key first."
             )]
         }
         return await ConnectionTester(client: client).run(config: config, apiKey: key)
+    }
+
+    /// The key a connection test should use: the one typed (trimmed) if any, else the saved one.
+    nonisolated static func keyForTest(typed: String, saved: String?) -> String? {
+        let typed = typed.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !typed.isEmpty { return typed }
+        if let saved, !saved.isEmpty { return saved }
+        return nil
     }
 
     /// Pins a certificate the user has confirmed (trust on first use), then reconnects.
@@ -190,6 +209,36 @@ final class ServerStore {
         settings.primary.expectedHostname = nil
         routes.invalidate()
         refreshNow()
+    }
+
+    /// A newer stable Unraid release than the one running, if the (opt-in) update check is on and has found one.
+    var osUpdate: OSUpdate? {
+        guard settings.preferences.checkForOSUpdates else { return nil }
+        return OSUpdate.compare(current: snapshot?.overview?.unraidVersion, latest: settings.latestRelease)
+    }
+
+    /// Asks Unraid's release server for the latest stable version, if the user opted in and it's due.
+    /// `force` skips the schedule (used when the setting is switched on).
+    func checkForOSUpdateIfNeeded(force: Bool = false, now: Date = .now) async {
+        guard settings.preferences.checkForOSUpdates, !isCheckingRelease else { return }
+        if !force, !ReleaseCheckPolicy.shouldCheck(
+            enabled: true, lastSuccess: settings.latestRelease?.checkedAt, lastFailure: lastReleaseFailure, now: now
+        ) { return }
+
+        isCheckingRelease = true
+        defer { isCheckingRelease = false }
+        do {
+            settings.recordLatestRelease(try await releaseFetcher.latestStable())
+            lastReleaseFailure = nil
+        } catch {
+            // Keep whatever we knew; just don't try again for a while.
+            lastReleaseFailure = now
+        }
+    }
+
+    /// Called when the setting is switched on, so the badge doesn't wait for the next scheduled check.
+    func checkForOSUpdateNow() {
+        Task { await checkForOSUpdateIfNeeded(force: true) }
     }
 
     /// How many containers have a newer image available.
@@ -207,8 +256,10 @@ final class ServerStore {
     }
 
     /// Where a click on this container should go, given the active route and the user's overrides.
+    /// A container that isn't running has nothing to open, so it gets no link.
     func containerLink(for container: DockerContainer) -> ContainerLink {
-        LinkBuilder.container(container, base: activeBase, overrides: settings.primary.containerOverrides)
+        guard container.state.isRunning else { return .unavailable(.notRunning) }
+        return LinkBuilder.container(container, base: activeBase, overrides: settings.primary.containerOverrides)
     }
 
     /// The VNC console URL for a running VM that has a console port set in Settings.
@@ -266,6 +317,39 @@ final class ServerStore {
     }
 
     func refreshNow() { start() }
+
+    /// Call when the address, mode, API key or refresh interval changed: reconnect soon instead of waiting for the
+    /// next scheduled refresh (up to a minute or two). Debounced, because address fields change on every keystroke.
+    func settingsChanged() {
+        settingsDebounce?.cancel()
+        settingsDebounce = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(800))
+            guard !Task.isCancelled, let self else { return }
+            self.consecutiveFailures = 0
+            self.routes.invalidate()
+            self.start()
+        }
+    }
+
+    /// Forget everything shown from the server (used when the API key is removed), so old data isn't left on screen.
+    func forgetServerData() {
+        snapshot = nil
+        health = nil
+        lastSuccess = nil
+        sectionErrors = [:]
+        connectionProblem = nil
+        connectionDetail = nil
+        certificateIssue = nil
+        authFailed = false
+        isUnreachable = false
+        isShowingCache = false
+        cpuHistory = []
+        ramHistory = []
+        consecutiveFailures = 0
+        cache.delete()
+        routes.reset()
+        settingsChanged()
+    }
 
     /// Retry from the Disconnected view: decide the route again, not just re-ask the old one.
     func retryNow() {
@@ -329,8 +413,10 @@ final class ServerStore {
             return
         }
         setupMessage = nil
+        refreshGeneration += 1
+        let generation = refreshGeneration
         isRefreshing = true
-        defer { isRefreshing = false }
+        defer { if generation == refreshGeneration { isRefreshing = false } }
 
         guard let route = await routes.resolve(apiKey: key) else {
             // No address we're willing to send the key to (e.g. the LAN address now belongs to another device).
@@ -405,6 +491,7 @@ final class ServerStore {
             cache.save(next)
             appendHistory(from: next.overview)
             rememberHostname(next.overview?.hostname)
+            Task { await checkForOSUpdateIfNeeded() }
         } else {
             consecutiveFailures += 1
             // A request on the current route failed: decide the route again next time.

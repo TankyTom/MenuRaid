@@ -17,6 +17,11 @@ final class RouteManager {
     private let prober: RouteProbing
     private var needsResolve = true
     private var resolvedFor: Signature?
+    private var resolvedAt: Date?
+
+    /// While on the remote route in Auto mode, look for the LAN again this often. Otherwise a server that wasn't
+    /// ready at launch (or a first-run permission prompt) would leave you on the VPN indefinitely, even at home.
+    static let lanRecheckInterval: TimeInterval = 5 * 60
 
     /// What the cached decision was based on.
     private struct Signature: Equatable {
@@ -42,9 +47,9 @@ final class RouteManager {
     }
 
     /// The route to use now: the cached one, or a fresh decision if invalidated or the settings changed.
-    func resolve(apiKey: String) async -> ActiveRoute? {
+    func resolve(apiKey: String, now: Date = .now) async -> ActiveRoute? {
         let signature = currentSignature
-        if !needsResolve, resolvedFor == signature { return active }
+        if !needsResolve, resolvedFor == signature, !shouldRecheckLAN(now: now) { return active }
 
         let resolution = await RouteResolver.resolve(settings.primary, apiKey: apiKey, prober: prober)
         // A cancelled refresh (panel opened, wake) makes the LAN probe fail for no real reason.
@@ -52,10 +57,19 @@ final class RouteManager {
         if Task.isCancelled { return active }
         needsResolve = false
         resolvedFor = signature
+        resolvedAt = now
         active = resolution.route
         note = resolution.note
         certificateIssue = resolution.certificateIssue
         return active
+    }
+
+    private func shouldRecheckLAN(now: Date) -> Bool {
+        guard active?.kind == .remote, settings.primary.mode == .auto,
+              AddressParser.parse(settings.primary.lanAddress) != nil,
+              let resolvedAt
+        else { return false }
+        return now.timeIntervalSince(resolvedAt) >= Self.lanRecheckInterval
     }
 
     /// Clears everything, e.g. when the server config is reset.
@@ -63,6 +77,7 @@ final class RouteManager {
         active = nil
         note = nil
         certificateIssue = nil
+        resolvedAt = nil
         needsResolve = true
     }
 

@@ -11,8 +11,8 @@ struct DecodingTests {
     }
 
     private func fixture<T: Decodable>(_ type: T.Type, _ name: String) throws -> T {
-        let url = try #require(Bundle.main.url(forResource: name, withExtension: "json"), "missing fixture \(name)")
-        return try JSONDecoder().decode(Envelope<T>.self, from: Data(contentsOf: url)).data
+        let json = try #require(FixtureJSON.named(name), "missing fixture \(name)")
+        return try JSONDecoder().decode(Envelope<T>.self, from: Data(json.utf8)).data
     }
 
     @Test func overviewDecodes() throws {

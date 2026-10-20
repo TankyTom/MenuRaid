@@ -24,6 +24,7 @@ struct SettingsView: View {
 /// Addresses, route mode and the API key (saved to the Keychain).
 struct ConnectionSettingsView: View {
     @Environment(SettingsStore.self) private var settings
+    @Environment(ServerStore.self) private var store
 
     private let keychain = KeychainStore()
 
@@ -57,7 +58,7 @@ struct ConnectionSettingsView: View {
                 }
             }
 
-            TestConnectionSection()
+            TestConnectionSection(typedKey: apiKey)
 
             Section {
                 SecureField("API key", text: $apiKey, prompt: Text(keyStored ? "Saved in Keychain" : "Paste your key"))
@@ -78,6 +79,10 @@ struct ConnectionSettingsView: View {
         }
         .formStyle(.grouped)
         .onAppear { keyStored = keychain.hasSecret(account: settings.primary.id.uuidString) }
+        // Reconnect soon after the connection settings change, instead of waiting for the next scheduled refresh.
+        .onChange(of: settings.primary.lanAddress) { store.settingsChanged() }
+        .onChange(of: settings.primary.remoteAddress) { store.settingsChanged() }
+        .onChange(of: settings.primary.mode) { store.settingsChanged() }
     }
 
     @ViewBuilder
@@ -102,6 +107,7 @@ struct ConnectionSettingsView: View {
             apiKey = ""
             keyStored = true
             keyMessage = "Saved."
+            store.settingsChanged()
         } catch {
             keyMessage = error.localizedDescription
         }
@@ -112,6 +118,7 @@ struct ConnectionSettingsView: View {
             try keychain.delete(account: settings.primary.id.uuidString)
             keyStored = false
             keyMessage = "Removed."
+            store.forgetServerData()
         } catch {
             keyMessage = error.localizedDescription
         }

@@ -134,20 +134,27 @@ struct HealthEvaluatorTests {
         #expect(evaluate(snapshot(disks: [disk()]), stale: true).reasons.first?.link == nil)
     }
 
-    @Test func summaryCountsProblemsAndThingsToCheck() {
+    @Test func theCardTitleSaysWhatIsWrong() {
         let alert = NotificationCounts(info: 0, warning: 0, alert: 1, total: 1)
-        let both = evaluate(snapshot(disks: [disk(status: "DISK_DSBL", errors: 2)], notifications: alert))
-        #expect(StatusCard.summary(for: both) == "2 problems · 1 to check")
-        let one = evaluate(snapshot(disks: [disk(errors: 1)]))
-        #expect(StatusCard.summary(for: one) == "1 problem")
-        #expect(StatusCard.summary(for: evaluate(snapshot(disks: [disk()]))) == nil)
+        #expect(StatusCard.heading(for: evaluate(snapshot(disks: [disk(errors: 1)]))) == "Problem")
+        #expect(StatusCard.heading(for: evaluate(snapshot(disks: [disk(status: "DISK_DSBL", errors: 2)]))) == "Problems")
+        #expect(StatusCard.heading(for: evaluate(snapshot(disks: [disk()], notifications: alert))) == "Issue")
+        let check = ParityCheck(running: true, paused: false, progress: 5, errors: nil, status: "RUNNING")
+        #expect(StatusCard.heading(for: evaluate(snapshot(disks: [disk(temp: 50)], parity: check))) == "Issues")
+        #expect(StatusCard.heading(for: evaluate(snapshot(disks: [disk()]))) == "All good")
+        #expect(StatusCard.heading(for: nil) == "Status")
+    }
+
+    @Test func aMixOfProblemsAndIssuesIsTitledByTheWorst() {
+        let alert = NotificationCounts(info: 0, warning: 0, alert: 1, total: 1)
+        #expect(StatusCard.heading(for: evaluate(snapshot(disks: [disk(errors: 1)], notifications: alert))) == "Problems")
     }
 
     @Test func realServerWithDisabledDiskIsRed() throws {
         struct Envelope<T: Decodable>: Decodable { let data: T }
         func load<T: Decodable>(_ type: T.Type, _ name: String) throws -> T {
-            let url = try #require(Bundle.main.url(forResource: name, withExtension: "json"))
-            return try JSONDecoder().decode(Envelope<T>.self, from: Data(contentsOf: url)).data
+            let json = try #require(FixtureJSON.named(name))
+            return try JSONDecoder().decode(Envelope<T>.self, from: Data(json.utf8)).data
         }
         var snap = snapshot()
         snap.array = ArrayInfo.make(

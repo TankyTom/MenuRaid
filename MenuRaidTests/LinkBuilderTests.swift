@@ -295,7 +295,7 @@ struct LinkBuilderTests {
 }
 
 struct VMConsoleLinkTests {
-    private let lan = URL(string: "http://192.168.1.10")!
+    private let lan = URL(string: "http://192.168.1.50")!
 
     private func vm(_ name: String = "Ubuntu", _ state: VMState = .running) -> VirtualMachine {
         VirtualMachine(id: name, name: name, state: state)
@@ -304,7 +304,7 @@ struct VMConsoleLinkTests {
     @Test func matchesUnraidsOwnConsoleLink() {
         // Copied from the "VNC Remote" link on a real server, minus the `v=` cache-buster.
         let url = LinkBuilder.vmConsole(vm(), base: lan, ports: ["Ubuntu": 5700])
-        #expect(url?.absoluteString == "http://192.168.1.10/plugins/dynamix.vm.manager/vnc.html?resize=scale&autoconnect=true&host=192.168.1.10&port=&path=/wsproxy/5700/")
+        #expect(url?.absoluteString == "http://192.168.1.50/plugins/dynamix.vm.manager/vnc.html?resize=scale&autoconnect=true&host=192.168.1.50&port=&path=/wsproxy/5700/")
     }
 
     @Test func onlyRunningVMsWithAPortGetAConsole() {
@@ -344,7 +344,7 @@ struct VMConsoleLinkTests {
     }
 
     @Test func portsSurviveEncodingAndOldConfigsStillLoad() throws {
-        var config = ServerConfig(lanAddress: "192.168.1.10")
+        var config = ServerConfig(lanAddress: "192.168.1.50")
         config.vmConsolePorts = ["Ubuntu": 5700]
         #expect(try JSONDecoder().decode(ServerConfig.self, from: JSONEncoder().encode(config)) == config)
         let old = try JSONDecoder().decode(ServerConfig.self, from: Data(#"{"lanAddress":"x"}"#.utf8))

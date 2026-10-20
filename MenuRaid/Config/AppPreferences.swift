@@ -56,6 +56,9 @@ nonisolated struct AppPreferences: Codable, Equatable, Sendable {
     var httpWarningDismissed = false
     /// List running containers above stopped ones (within the chosen order).
     var dockerRunningFirst = true
+    /// Ask Unraid's public release server which version is the latest stable. Off by default: it is the one
+    /// request MenuRaid makes to anything other than your own server.
+    var checkForOSUpdates = false
 
     init() {}
 
@@ -68,5 +71,6 @@ nonisolated struct AppPreferences: Codable, Equatable, Sendable {
         thresholds = c.lenient(Thresholds.self, .thresholds) ?? Thresholds()
         httpWarningDismissed = c.lenient(Bool.self, .httpWarningDismissed) ?? false
         dockerRunningFirst = c.lenient(Bool.self, .dockerRunningFirst) ?? true
+        checkForOSUpdates = c.lenient(Bool.self, .checkForOSUpdates) ?? false
     }
 }

@@ -26,6 +26,15 @@ nonisolated struct DiskInfo: Codable, Equatable, Identifiable, Sendable {
 
     var isStatusOK: Bool { status == "DISK_OK" }
 
+    /// An empty slot (`DISK_NP`), which isn't a failure.
+    var isEmptySlot: Bool { status == "DISK_NP" }
+
+    /// A real failure: disabled, missing or invalid. The one rule shared by the health status and the disk row.
+    var isFailed: Bool {
+        guard let status else { return false }
+        return status != "DISK_OK" && status != "DISK_NP"
+    }
+
     /// Fraction of the filesystem in use (0...1), if known.
     var usedFraction: Double? {
         guard let used = fsUsedKB, let size = fsSizeKB, size > 0 else { return nil }
@@ -36,7 +45,8 @@ nonisolated struct DiskInfo: Codable, Equatable, Identifiable, Sendable {
         switch status {
         case "DISK_OK": "OK"
         case "DISK_DSBL": "Disabled"
-        case "DISK_NP", "DISK_NP_DSBL", "DISK_NP_MISSING": "Missing"
+        case "DISK_NP": "Empty slot"
+        case "DISK_NP_DSBL", "DISK_NP_MISSING": "Missing"
         case "DISK_INVALID": "Invalid"
         case "DISK_NEW": "New"
         case "DISK_WRONG": "Wrong disk"

@@ -6,12 +6,21 @@ import Observation
 final class SettingsStore {
     private static let serversKey = "servers.v1"
     private static let preferencesKey = "preferences.v1"
+    private static let releaseKey = "latestRelease.v1"
 
     /// All configured servers. Version 1 uses a single entry, but the list keeps multi-server open.
     private(set) var servers: [ServerConfig]
 
     var preferences: AppPreferences {
         didSet { save(preferences, key: Self.preferencesKey) }
+    }
+
+    /// The latest stable Unraid release seen at the last successful check (kept so the badge shows at launch).
+    private(set) var latestRelease: LatestRelease?
+
+    func recordLatestRelease(_ release: LatestRelease?) {
+        latestRelease = release
+        if let release { save(release, key: Self.releaseKey) } else { defaults.removeObject(forKey: Self.releaseKey) }
     }
 
     /// Set by the footer sun/moon button. Not saved, so the default from Settings applies on next launch.
@@ -30,6 +39,10 @@ final class SettingsStore {
             servers = decoded
         } else {
             servers = [ServerConfig()]
+        }
+        if let data = defaults.data(forKey: Self.releaseKey) {
+            let decoder = JSONDecoder()
+            latestRelease = try? decoder.decode(LatestRelease.self, from: data)
         }
         if let data = defaults.data(forKey: Self.preferencesKey),
            let decoded = try? JSONDecoder().decode(AppPreferences.self, from: data) {

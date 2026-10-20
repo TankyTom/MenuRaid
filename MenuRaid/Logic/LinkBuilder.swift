@@ -13,6 +13,8 @@ nonisolated enum ContainerLink: Equatable, Sendable {
     enum Reason: Equatable, Sendable {
         case noServer
         case noPublishedPort
+        /// Stopped, paused or restarting: there's no web UI to open right now.
+        case notRunning
     }
 
     var url: URL? {
@@ -27,6 +29,7 @@ nonisolated enum ContainerLink: Equatable, Sendable {
         switch self {
         case .unavailable(.noServer): "No server address set. Add one in Settings."
         case .unavailable(.noPublishedPort): "No web UI or published port. Set a URL override in Settings."
+        case .unavailable(.notRunning): "This container isn't running, so there's nothing to open."
         default: nil
         }
     }
@@ -41,6 +44,7 @@ nonisolated enum LinkBuilder {
         case vms = "VMs"
         case systemLog = "Tools/Syslog"
         case notifications = "Tools/NotificationsArchive"
+        case updateOS = "Tools/Update"
         case terminal = "webterminal/ttyd/"
         case fileManager = "Main/Browse"
 
@@ -53,6 +57,7 @@ nonisolated enum LinkBuilder {
             case .vms: "VMs page"
             case .systemLog: "System log"
             case .notifications: "Notifications"
+            case .updateOS: "Update OS page"
             case .terminal: "Terminal"
             case .fileManager: "File manager"
             }

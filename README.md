@@ -16,12 +16,13 @@ Version 1 is **read-only**: it never starts, stops or changes anything on your s
 - **Array and disks:** capacity, parity-check progress, and one row per parity, data and cache disk with temperature, usage, error count and spun-down state.
 - **Docker:** running containers first. Click one to open its web UI.
 - **VMs:** click one to open its VNC console (if you've set its port) or Unraid's VMs page.
+- **Update hint (optional):** a small "↑ 7.3.3" beside the Unraid version when a newer stable release exists, and a small "↑ N updates" in the Docker header for containers with a newer image.
 - **Footer:** unread notification count, open the Unraid webGUI, light/dark switch, Settings, Quit.
 - **At home or away:** it uses your LAN address when your server answers there and your remote address (for example Tailscale) otherwise, and switches by itself when your network changes.
 
 ## Requirements
 
-- macOS 14 or later.
+- macOS 14.6 or later.
 - Unraid **7.2 or later**, which has the GraphQL API built in.
 - An Unraid **API key**. Create one in the Unraid webGUI under **Settings → Management Access → API Keys**, with the **Viewer** role. Version 1 only reads, so it needs nothing more.
 
@@ -57,7 +58,7 @@ Containers on a custom network with their own IP (for example `br0`) can't be re
 ## Security and privacy
 
 - The API key lives only in the Keychain (this device only, not iCloud) and is never logged or written to the cache.
-- MenuRaid contacts **only** the addresses you enter. There is no analytics, no update check and no other network traffic.
+- MenuRaid contacts **only** the addresses you enter, with one optional exception: **Settings → Display → Check for Unraid OS updates** (off by default). When you turn it on, MenuRaid asks Unraid's public release server (`releases.unraid.net`) for the latest stable version about every 6 hours and compares it with your server's. That request carries nothing about your server: no version, hostname or API key. There is no analytics and no other network traffic.
 - **HTTPS with a self-signed certificate:** the first time, MenuRaid shows the certificate's SHA-256 fingerprint and asks you to confirm it (trust on first use). After that it accepts only that exact certificate. If it changes, the connection is blocked with a clear warning and a deliberate re-trust step. There is no "trust any certificate" option.
 - **macOS App Transport Security:** home servers usually speak plain `http://`, and macOS blocks that by default for names like `tower.tailnet-xxxx.ts.net`. MenuRaid therefore sets `NSAllowsArbitraryLoads` in its Info.plist. This only widens what the app is *allowed* to connect to; the app still contacts nothing but the addresses you enter. (`NSAllowsLocalNetworking` is deliberately not set: macOS ignores `NSAllowsArbitraryLoads` whenever it is present.) If you build your own copy, keep that setting or `http://` addresses other than IPs and `.local` names won't connect.
 - **Plain `http://` on your LAN** sends the API key unencrypted across your network. MenuRaid shows a one-time, dismissible notice and suggests enabling HTTPS in Unraid (Settings → Management Access). It doesn't warn about the remote address, which is normally a VPN such as Tailscale.
@@ -77,9 +78,11 @@ Containers on a custom network with their own IP (for example `br0`) can't be re
 
 Open `MenuRaid.xcodeproj` in Xcode and run the `MenuRaid` scheme. There are no third-party dependencies: only Apple frameworks (SwiftUI, Charts, Network, Security, ServiceManagement, CryptoKit).
 
-The unit tests (Swift Testing) cover address parsing, link building (containers, VM consoles), health rules, route selection with a mock prober, connection reports, decoding of real server responses, the snapshot cache and the settings.
+The unit tests (Swift Testing) cover address parsing, link building (containers, VM consoles), health rules, route selection with a mock prober, connection reports, decoding of sample server responses (a real capture, scrubbed of personal details), the snapshot cache and the settings.
 
-Before sharing a build, set the bundle identifier to your own (Target → General).
+Before sharing a build, set the bundle identifier to your own (Target → General), and fill in the *Privacy - Local Network Usage Description* and *App Category* fields on the target's Info tab: the build settings for both are present but empty, and macOS shows the first one in a permission prompt.
+
+The sample data used by previews and tests lives in a debug-only Swift file (`Fixtures/FixtureJSON.swift`), so nothing from it is bundled into a release build.
 
 ## Limits of version 1
 

@@ -7,6 +7,8 @@ import AppKit
 struct Card<Trailing: View, Content: View>: View {
     let title: String
     var tint: Color?
+    /// Colour of the title; the usual secondary grey when nil.
+    var titleColor: Color?
     var spacing: CGFloat = 10
     let trailing: Trailing
     let content: Content
@@ -14,12 +16,14 @@ struct Card<Trailing: View, Content: View>: View {
     init(
         _ title: String,
         tint: Color? = nil,
+        titleColor: Color? = nil,
         spacing: CGFloat = 10,
         @ViewBuilder trailing: () -> Trailing,
         @ViewBuilder content: () -> Content
     ) {
         self.title = title
         self.tint = tint
+        self.titleColor = titleColor
         self.spacing = spacing
         self.trailing = trailing()
         self.content = content()
@@ -35,7 +39,7 @@ struct Card<Trailing: View, Content: View>: View {
                 Text(title.uppercased())
                     .font(.caption.weight(.semibold))
                     .tracking(1.2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(titleColor.map { AnyShapeStyle($0) } ?? AnyShapeStyle(.secondary))
                     .accessibilityAddTraits(.isHeader)
                 Spacer()
                 trailing
@@ -52,8 +56,8 @@ struct Card<Trailing: View, Content: View>: View {
 }
 
 extension Card where Trailing == EmptyView {
-    init(_ title: String, tint: Color? = nil, spacing: CGFloat = 10, @ViewBuilder content: () -> Content) {
-        self.init(title, tint: tint, spacing: spacing, trailing: { EmptyView() }, content: content)
+    init(_ title: String, tint: Color? = nil, titleColor: Color? = nil, spacing: CGFloat = 10, @ViewBuilder content: () -> Content) {
+        self.init(title, tint: tint, titleColor: titleColor, spacing: spacing, trailing: { EmptyView() }, content: content)
     }
 }
 

@@ -9,19 +9,30 @@ final class NetworkPathObserver: @unchecked Sendable {
 
     private let monitor = NWPathMonitor()
 
+    /// The last network setup seen. The monitor calls back on its own queue, so access is guarded.
+    private nonisolated final class Signature: @unchecked Sendable {
+        private let lock = NSLock()
+        private var last: String?
+
+        /// Records the new signature; true only if it differs from a previous one (the first report is just the start state).
+        func changed(to new: String) -> Bool {
+            lock.withLock {
+                defer { last = new }
+                guard let last else { return false }
+                return last != new
+            }
+        }
+    }
+
     init() {
         var continuation: AsyncStream<Void>.Continuation!
         changes = AsyncStream(bufferingPolicy: .bufferingNewest(1)) { continuation = $0 }
         let output = continuation!
+        let signature = Signature()
 
-        var lastSignature: String?
         monitor.pathUpdateHandler = { path in
             let interfaces = path.availableInterfaces.map(\.name).sorted().joined(separator: ",")
-            let signature = "\(path.status)|\(interfaces)"
-            defer { lastSignature = signature }
-            // The first callback only reports the starting state, not a change.
-            guard let previous = lastSignature, previous != signature else { return }
-            output.yield()
+            if signature.changed(to: "\(path.status)|\(interfaces)") { output.yield() }
         }
         monitor.start(queue: DispatchQueue(label: "MenuRaid.NetworkPathObserver"))
     }

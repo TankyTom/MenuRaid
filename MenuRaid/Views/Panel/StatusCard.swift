@@ -1,8 +1,8 @@
 import SwiftUI
 import AppKit
 
-/// Hero card: overall health in big type, a one-line summary, the reasons behind it (each a link to where
-/// you can look into it), shortcuts to the logs, and a few status chips.
+/// The status card. Its title is the status ("Problem", "Issue" or "All good"); below it, the reasons, each a link
+/// to where you can look into it, with shortcuts to the logs in the title row.
 struct StatusCard: View {
     @Environment(ServerStore.self) private var store
     @Environment(\.openSettings) private var openSettings
@@ -11,14 +11,14 @@ struct StatusCard: View {
 
     var body: some View {
         let level = store.health?.level
-        Card("Status", tint: level == .green || level == nil ? nil : Palette.color(for: level), spacing: 8, trailing: {
+        let tint: Color? = (level == .green || level == nil) ? nil : Palette.color(for: level)
+        Card(Self.heading(for: store.health), tint: tint, titleColor: level.map { Palette.color(for: $0) }, spacing: 8, trailing: {
             if let health = store.health { shortcuts(health) }
         }) {
             if let message = store.setupMessage {
                 Text(message).font(.callout).foregroundStyle(.secondary)
                 Button("Open Settings") { showSettings() }
             } else if let health = store.health {
-                headline(health)
                 reasons(health)
                 connectionNotes
                 chips
@@ -28,32 +28,16 @@ struct StatusCard: View {
         }
     }
 
-    // MARK: Headline
-
-    private func headline(_ health: Health) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 8) {
-            LevelIcon(level: health.level, size: 21)
-            Text(title(for: health.level))
-                .font(.system(size: 22, weight: .bold))
-                .foregroundStyle(Palette.color(for: health.level))
-            Spacer(minLength: 4)
-            // One reason explains itself, so the count is only worth showing for several.
-            if health.reasons.count > 1, let summary = Self.summary(for: health) {
-                // Neutral, not red: red-on-red is hard to read.
-                Text(summary).font(.caption).foregroundStyle(.primary.opacity(0.7))
-            }
+    /// The card's title says what's wrong, so no separate headline is needed:
+    /// "Problem(s)" for a red status, "Issue(s)" for amber, "All good" for green.
+    static func heading(for health: Health?) -> String {
+        guard let health else { return "Status" }
+        let several = health.reasons.count > 1
+        switch health.level {
+        case .green: return "All good"
+        case .amber: return several ? "Issues" : "Issue"
+        case .red: return several ? "Problems" : "Problem"
         }
-        .accessibilityElement(children: .combine)
-    }
-
-    /// "2 problems · 1 to check", or nil when there's nothing to report.
-    static func summary(for health: Health) -> String? {
-        let problems = health.reasons.filter { $0.level == .red }.count
-        let warnings = health.reasons.filter { $0.level == .amber }.count
-        var parts: [String] = []
-        if problems > 0 { parts.append("\(problems) problem\(problems == 1 ? "" : "s")") }
-        if warnings > 0 { parts.append("\(warnings) to check") }
-        return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
     // MARK: Reasons
@@ -143,13 +127,6 @@ struct StatusCard: View {
         }
     }
 
-    private func title(for level: HealthLevel) -> String {
-        switch level {
-        case .green: "All good"
-        case .amber: "Needs attention"
-        case .red: "Problem"
-        }
-    }
 }
 
 /// One reason. With a destination it's a button (whole row) with an arrow; without, plain text.

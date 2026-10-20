@@ -2,17 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>CFBundleDocumentTypes</key>
-	<array>
-		<dict>
-			<key>CFBundleIdentifier</key>
-			<string></string>
-			<key>CFBundleTypeRole</key>
-			<string>Editor</string>
-			<key>LSHandlerRank</key>
-			<string>Default</string>
-		</dict>
-	</array>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.utilities</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>MenuRaid connects to your Unraid server on your local network to read its status.</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<!-- MenuRaid only connects to the server addresses the user types in, which are often plain http://

@@ -56,7 +56,7 @@ nonisolated enum HealthEvaluator {
 
             for disk in array.disks {
                 // DISK_NP is an empty slot, not a failure. Disabled, missing and invalid disks are.
-                if let status = disk.status, status != "DISK_OK", status != "DISK_NP" {
+                if disk.isFailed {
                     reasons.append(HealthReason(level: .red, message: "\(disk.name): \(disk.statusDescription.lowercased())", link: .page(.main)))
                 }
                 if let errors = disk.numErrors, errors > 0 {

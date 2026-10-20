@@ -169,13 +169,14 @@ struct DiskRow: View {
 
     /// Different shapes as well as colours, so state isn't conveyed by colour alone.
     private var statusSymbol: String {
-        if !disk.isStatusOK && disk.status != nil { return "xmark.octagon.fill" }
-        if (disk.numErrors ?? 0) > 0 { return "xmark.octagon.fill" }
+        if disk.isEmptySlot { return "minus.circle" }
+        if disk.isFailed || (disk.numErrors ?? 0) > 0 { return "xmark.octagon.fill" }
         return isHot ? "exclamationmark.triangle.fill" : "checkmark.circle.fill"
     }
 
     private var statusColor: Color {
-        if (!disk.isStatusOK && disk.status != nil) || (disk.numErrors ?? 0) > 0 { return Palette.bad }
+        if disk.isEmptySlot { return Palette.idle }
+        if disk.isFailed || (disk.numErrors ?? 0) > 0 { return Palette.bad }
         if let temp = disk.tempC, temp >= thresholds.critical(rotational: disk.rotational) { return Palette.bad }
         return isHot ? Palette.warn : Palette.ok
     }

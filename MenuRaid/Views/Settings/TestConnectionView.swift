@@ -5,6 +5,9 @@ struct TestConnectionSection: View {
     @Environment(SettingsStore.self) private var settings
     @Environment(ServerStore.self) private var store
 
+    /// What's currently typed in the API key field (may not be saved yet).
+    var typedKey: String = ""
+
     @State private var reports: [ConnectionReport] = []
     @State private var isRunning = false
     @State private var hasRun = false
@@ -29,7 +32,7 @@ struct TestConnectionSection: View {
         } header: {
             Text("Connection")
         } footer: {
-            Text("In Auto mode MenuRaid uses the LAN address when your server answers there, otherwise the remote address.")
+            Text("In Auto mode MenuRaid uses the LAN address when your server answers there, otherwise the remote address. A key you've typed above is used for the test even if you haven't saved it yet.")
         }
         .confirmationDialog(
             "Trust the new certificate?",
@@ -70,7 +73,7 @@ struct TestConnectionSection: View {
     private func run() async {
         isRunning = true
         defer { isRunning = false; hasRun = true }
-        reports = await store.testConnection()
+        reports = await store.testConnection(typedKey: typedKey)
     }
 
     private func trust(_ report: ConnectionReport) {
@@ -180,7 +183,7 @@ private struct ReportView: View {
 #if DEBUG
 #Preview("Reports") {
     let lan = ConnectionReport.make(
-        kind: .lan, address: "192.168.1.10", url: URL(string: "http://192.168.1.10"),
+        kind: .lan, address: "192.168.1.50", url: URL(string: "http://192.168.1.50"),
         outcome: .success("Tower"), latency: 0.042, expectedHostname: "Tower", hasPin: false
     )
     let remote = ConnectionReport.make(

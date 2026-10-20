@@ -20,6 +20,10 @@ nonisolated struct SnapshotCache: Sendable {
         return try? decoder.decode(ServerSnapshot.self, from: data)
     }
 
+    func delete() {
+        try? FileManager.default.removeItem(at: url)
+    }
+
     func save(_ snapshot: ServerSnapshot) {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
